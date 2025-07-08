@@ -181,11 +181,11 @@ export default function NFTFrame({
                 const sanitizedName = sanitizeNFTName(nft.metadata?.name, nft.token_id, 35);
                 const textLines = splitTextForDisplay(sanitizedName, 25);
                 const fontSize = getDynamicFontSize(sanitizedName, 0.2);
-                
+
                 return textLines.map((line, index) => (
                     <Text
                         key={index}
-                        position={[0, -(frameBorderHeight / 2 + 0.3 + (index * fontSize * 1.2)), 0.1]}
+                        position={[0, -(frameBorderHeight / 2 + 0.3 + index * fontSize * 1.2), 0.1]}
                         fontSize={fontSize}
                         color={isSelected ? "#00bcd4" : "#ffffff"}
                         anchorX="center"

@@ -23,14 +23,14 @@ export function sanitizeNFTName(
         // Replace common problematic chars with safe alternatives
         .replace(/[""]/g, '"')
         .replace(/['']/g, "'")
-        .replace(/[–—]/g, '-')
-        .replace(/[…]/g, '...')
+        .replace(/[–—]/g, "-")
+        .replace(/[…]/g, "...")
         // Remove zero-width chars and other invisible nonsense
-        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
         // Replace multiple whitespace with single space
-        .replace(/\s+/g, ' ')
+        .replace(/\s+/g, " ")
         // Remove control characters except newlines/tabs
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 
     // Handle emojis and special Unicode - keep them but be aware they might not render
     // For now, we'll keep them since Three.js can handle basic emoji display
@@ -38,22 +38,22 @@ export function sanitizeNFTName(
     // Smart truncation
     if (cleanName.length > maxLength) {
         // Try to break at word boundaries
-        const words = cleanName.split(' ');
-        let result = '';
-        
+        const words = cleanName.split(" ");
+        let result = "";
+
         for (const word of words) {
-            if ((result + ' ' + word).length > maxLength - 3) {
+            if ((result + " " + word).length > maxLength - 3) {
                 break;
             }
-            result += (result ? ' ' : '') + word;
+            result += (result ? " " : "") + word;
         }
 
         // If we got at least one word, use it
         if (result.length > 0) {
-            cleanName = result + '...';
+            cleanName = result + "...";
         } else {
             // If even the first word is too long, hard truncate
-            cleanName = cleanName.substring(0, maxLength - 3) + '...';
+            cleanName = cleanName.substring(0, maxLength - 3) + "...";
         }
     }
 
@@ -70,7 +70,7 @@ export function sanitizeNFTName(
  */
 export function getDynamicFontSize(text: string, baseSize: number = 0.3): number {
     const length = text.length;
-    
+
     if (length <= 10) return baseSize;
     if (length <= 20) return baseSize * 0.9;
     if (length <= 30) return baseSize * 0.8;
@@ -81,7 +81,7 @@ export function getDynamicFontSize(text: string, baseSize: number = 0.3): number
  * Determines if text should be displayed on multiple lines
  */
 export function shouldUseMultiLine(text: string, maxLineLength: number = 20): boolean {
-    return text.length > maxLineLength && text.includes(' ');
+    return text.length > maxLineLength && text.includes(" ");
 }
 
 /**
@@ -92,12 +92,12 @@ export function splitTextForDisplay(text: string, maxLineLength: number = 20): s
         return [text];
     }
 
-    const words = text.split(' ');
+    const words = text.split(" ");
     const lines: string[] = [];
-    let currentLine = '';
+    let currentLine = "";
 
     for (const word of words) {
-        if ((currentLine + ' ' + word).length > maxLineLength) {
+        if ((currentLine + " " + word).length > maxLineLength) {
             if (currentLine) {
                 lines.push(currentLine);
                 currentLine = word;
@@ -106,7 +106,7 @@ export function splitTextForDisplay(text: string, maxLineLength: number = 20): s
                 lines.push(word);
             }
         } else {
-            currentLine += (currentLine ? ' ' : '') + word;
+            currentLine += (currentLine ? " " : "") + word;
         }
     }
 

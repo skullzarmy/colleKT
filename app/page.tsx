@@ -69,7 +69,7 @@ export default function HomePage() {
             <div className="w-full max-w-md space-y-8">
                 {/* Logo and Title */}
                 <div className="space-y-2 text-center">
-                    <h1 className="text-4xl font-bold">COLLKT</h1>
+                    <h1 className="text-4xl font-bold">colleKT</h1>
                     <p className="text-gray-400">Tezos NFT Gallery</p>
                 </div>
 
