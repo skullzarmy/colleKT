@@ -1,0 +1,152 @@
+import { Suspense, useState, useEffect, useCallback } from "react";
+import { Canvas } from "@react-three/fiber";
+import { Environment, Html } from "@react-three/drei";
+import { NFTToken } from "../lib/nft";
+import GalleryRoom from "./gallery/GalleryRoom";
+import CameraModeSelector, { CameraMode } from "./gallery/ui/CameraModeSelector";
+import RoomNavigation from "./gallery/ui/RoomNavigation";
+
+interface Gallery3DProps {
+    nfts: NFTToken[];
+    address: string;
+    domain?: string | null;
+    displayName?: string;
+    onNFTSelect: (nft: NFTToken) => void;
+    preloadedTextures?: Map<string, any>; // THREE.Texture but avoiding import issues
+    currentRoom?: number;
+    onRoomChange?: (roomNumber: number) => void;
+    totalNFTs?: number; // Total NFTs in the collection for calculating total rooms
+    // Layout coordination props to avoid UI overlaps
+    topOffset?: number; // Offset from top to avoid overlapping with page headers
+    // View state persistence
+    initialCameraMode?: CameraMode;
+    onCameraModeChange?: (mode: CameraMode) => void;
+}
+
+const NFTS_PER_ROOM = 20;
+
+export default function Gallery3D({
+    nfts,
+    address,
+    domain,
+    displayName,
+    onNFTSelect,
+    preloadedTextures,
+    currentRoom: initialRoom = 0,
+    onRoomChange,
+    totalNFTs = 0,
+    topOffset = 0, // Default to no offset
+    initialCameraMode = "walk",
+    onCameraModeChange,
+}: Gallery3DProps) {
+    const [currentRoom, setCurrentRoom] = useState(initialRoom);
+    const [cameraMode, setCameraMode] = useState<CameraMode>(initialCameraMode);
+
+    // Update local room state when prop changes
+    useEffect(() => {
+        setCurrentRoom(initialRoom);
+    }, [initialRoom]);
+
+    // Update camera mode when prop changes
+    useEffect(() => {
+        setCameraMode(initialCameraMode);
+    }, [initialCameraMode, cameraMode]);
+
+    // Handle camera mode changes and notify parent
+    const handleCameraModeChange = useCallback(
+        (mode: CameraMode) => {
+            setCameraMode(mode);
+            onCameraModeChange?.(mode);
+        },
+        [onCameraModeChange]
+    );
+
+    // Calculate total rooms based on total NFTs in collection
+    const totalRooms = Math.max(1, Math.ceil(totalNFTs / NFTS_PER_ROOM));
+    const currentRoomNFTs = nfts; // All NFTs passed are for the current room
+
+    const handleNextRoom = useCallback(() => {
+        if (currentRoom < totalRooms - 1) {
+            const newRoom = currentRoom + 1;
+            setCurrentRoom(newRoom);
+            onRoomChange?.(newRoom);
+        }
+    }, [currentRoom, totalRooms, onRoomChange]);
+
+    const handlePrevRoom = useCallback(() => {
+        if (currentRoom > 0) {
+            const newRoom = currentRoom - 1;
+            setCurrentRoom(newRoom);
+            onRoomChange?.(newRoom);
+        }
+    }, [currentRoom, onRoomChange]);
+
+    if (nfts.length === 0) {
+        return (
+            <div className="flex items-center justify-center w-full h-screen bg-black">
+                <div className="space-y-4 text-center">
+                    <p className="text-xl text-white">No NFTs found</p>
+                    <p className="text-white/60">This address doesn't seem to have any NFTs with metadata</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="relative w-full h-screen">
+            <Canvas
+                shadows
+                camera={{ fov: 60 }}
+                gl={{
+                    antialias: true,
+                    alpha: false,
+                    powerPreference: "high-performance",
+                }}
+                dpr={[1, 2]}
+                performance={{ min: 0.5 }}
+            >
+                <Suspense
+                    fallback={
+                        <Html center>
+                            <div className="text-xl text-white">Loading Room {currentRoom + 1}...</div>
+                        </Html>
+                    }
+                >
+                    <Environment preset="warehouse" />
+                    <GalleryRoom
+                        nfts={currentRoomNFTs}
+                        roomNumber={currentRoom}
+                        totalRooms={totalRooms}
+                        walletAddress={address}
+                        domain={domain}
+                        displayName={displayName}
+                        onNFTSelect={onNFTSelect}
+                        onNextRoom={handleNextRoom}
+                        onPrevRoom={handlePrevRoom}
+                        preloadedTextures={preloadedTextures}
+                        cameraMode={cameraMode}
+                    />
+                </Suspense>
+            </Canvas>
+
+            {/* Movement Controls Drawer */}
+            <CameraModeSelector
+                cameraMode={cameraMode}
+                onCameraModeChange={handleCameraModeChange}
+                topOffset={topOffset}
+            />
+
+            {/* Room Navigation UI */}
+            <RoomNavigation
+                currentRoom={currentRoom}
+                totalRooms={totalRooms}
+                currentRoomNFTCount={currentRoomNFTs.length}
+                totalCollectionNFTs={totalNFTs}
+                address={address}
+                onPrevRoom={handlePrevRoom}
+                onNextRoom={handleNextRoom}
+                onGoToRoom={onRoomChange}
+            />
+        </div>
+    );
+}
