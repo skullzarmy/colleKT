@@ -41,7 +41,7 @@ export default function RoomTitle({
     // Create the title text
     const ownerName = domain || displayName || `${walletAddress.slice(0, 8)}...${walletAddress.slice(-4)}`;
     const titleText = `${ownerName}'s ColleKT`;
-    const pageText = `Page ${roomNumber + 1} of ${totalRooms}`;
+    const roomText = `Room ${roomNumber + 1} of ${totalRooms}`;
 
     return (
         <group position={titlePosition} rotation={[0, Math.PI, 0]}>
@@ -63,7 +63,7 @@ export default function RoomTitle({
                     <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} />
                 </Text3D>
 
-                {/* Page info - smaller text below */}
+                {/* Room info - smaller text below */}
                 <Text3D
                     font={font}
                     size={fontSize * 0.6} // Smaller size
@@ -74,9 +74,9 @@ export default function RoomTitle({
                     bevelSize={0.005}
                     bevelOffset={0}
                     bevelSegments={3}
-                    position={[0, -0.5, 0]} // Offset down for page info
+                    position={[0, -0.5, 0]} // Offset down for room info
                 >
-                    {pageText}
+                    {roomText}
                     <meshStandardMaterial color={color} roughness={0.5} metalness={0.05} />
                 </Text3D>
             </Center>
