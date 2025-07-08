@@ -63,7 +63,7 @@ interface NFTToken {
 
 interface MediaModalProps {
     nft: NFTToken | null;
-    onClose: () => void;
+    onClose?: () => void;
 }
 
 export default function MediaModal({ nft, onClose }: MediaModalProps) {
@@ -522,7 +522,12 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             </Button>
                         )}
 
-                        <Button onClick={onClose} variant="ghost" size="sm" className="text-gray-300 hover:text-white">
+                        <Button
+                            onClick={onClose || (() => {})}
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-300 hover:text-white"
+                        >
                             <X size={16} />
                         </Button>
                     </div>

@@ -1,3 +1,5 @@
+"use client";
+
 import { Text3D, Center } from "@react-three/drei";
 import { suspend } from "suspend-react";
 

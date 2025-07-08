@@ -1,3 +1,5 @@
+"use client";
+
 import { Text, Box, Cylinder, Sphere } from "@react-three/drei";
 import { useRef, useState, useEffect } from "react";
 import { Group } from "three";
@@ -6,7 +8,7 @@ interface DoorProps {
     position: [number, number, number];
     rotation: [number, number, number];
     label: string;
-    onClick: () => void;
+    onClick?: () => void;
     disabled?: boolean;
 }
 
@@ -37,7 +39,7 @@ export default function Door({ position, rotation, label, onClick, disabled }: D
             rotation={rotation}
             onPointerEnter={() => !disabled && setIsHovered(true)}
             onPointerLeave={() => setIsHovered(false)}
-            onClick={disabled ? undefined : onClick}
+            onClick={disabled ? undefined : onClick || (() => {})}
         >
             {/* Invisible clickable area covering entire door assembly */}
             <Box args={[3, 5, 3]} position={[0, 0, 0]} visible={false}>

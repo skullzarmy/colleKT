@@ -60,7 +60,7 @@ interface NFTToken {
 
 interface MetadataPanelProps {
     nft: NFTToken | null;
-    onClose: () => void;
+    onClose?: () => void;
 }
 
 export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
@@ -150,7 +150,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                 Back to Details
                             </Button>
                             <Button
-                                onClick={onClose}
+                                onClick={onClose || (() => {})}
                                 variant="ghost"
                                 size="sm"
                                 className="text-gray-400 hover:text-white"
@@ -181,7 +181,12 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                 <Badge className="bg-cyan-600 hover:bg-cyan-700">Interactive</Badge>
                             )}
                         </div>
-                        <Button onClick={onClose} variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                        <Button
+                            onClick={onClose || (() => {})}
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-400 hover:text-white"
+                        >
                             <X className="w-5 h-5" />
                         </Button>
                     </div>

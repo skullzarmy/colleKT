@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import MediaModal from "@/components/media-modal";
 import { useViewState } from "@/contexts/ViewStateContext";
 import { useTezosDomain } from "@/hooks/use-tezos-domain";
 import * as THREE from "three";
@@ -21,6 +20,11 @@ const Gallery3D = dynamic(() => import("@/components/Gallery3D"), {
             </div>
         </div>
     ),
+});
+
+// Dynamically import MediaModal to prevent serialization issues with function props
+const MediaModal = dynamic(() => import("@/components/media-modal"), {
+    ssr: false,
 });
 
 interface NFTToken {

@@ -36,7 +36,7 @@ interface NFTFrameProps {
     nft: NFTToken;
     position: [number, number, number];
     rotation?: [number, number, number];
-    onClick: () => void;
+    onClick?: () => void;
     isSelected: boolean;
     preloadedTexture?: any; // THREE.Texture but avoiding import issues
     aspectRatio?: number; // width/height ratio for proper sizing
@@ -145,7 +145,7 @@ export default function NFTFrame({
             ref={frameRef}
             position={position}
             rotation={rotation}
-            onClick={onClick}
+            onClick={onClick || (() => {})}
             onPointerOver={() => setHovered(true)}
             onPointerOut={() => setHovered(false)}
         >

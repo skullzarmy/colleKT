@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo, useCallback, useState, useEffect } from "react";
 import { NFTToken } from "../../lib/nft";
 import NFTFrame from "../nft-frame";
@@ -18,9 +20,9 @@ interface GalleryRoomProps {
     walletAddress: string;
     domain?: string | null;
     displayName?: string;
-    onNFTSelect: (nft: NFTToken) => void;
-    onNextRoom: () => void;
-    onPrevRoom: () => void;
+    onNFTSelect?: (nft: NFTToken) => void;
+    onNextRoom?: () => void;
+    onPrevRoom?: () => void;
     preloadedTextures?: Map<string, any>;
     cameraMode: CameraMode;
 }
@@ -195,7 +197,7 @@ export default function GalleryRoom({
 
     const handleNFTClick = useCallback(
         (nft: NFTToken) => {
-            onNFTSelect(nft);
+            onNFTSelect?.(nft);
         },
         [onNFTSelect]
     );
@@ -259,7 +261,12 @@ export default function GalleryRoom({
 
             {/* Navigation Doors - repositioned for forward-facing hallway layout */}
             {roomNumber > 0 && (
-                <Door position={[0, 2, 0]} rotation={[0, 0, 0]} label="← PREVIOUS ROOM" onClick={onPrevRoom} />
+                <Door
+                    position={[0, 2, 0]}
+                    rotation={[0, 0, 0]}
+                    label="← PREVIOUS ROOM"
+                    onClick={onPrevRoom || (() => {})}
+                />
             )}
 
             {roomNumber < totalRooms - 1 && (
@@ -267,7 +274,7 @@ export default function GalleryRoom({
                     position={[0, 2, hallwayLength]}
                     rotation={[0, Math.PI, 0]}
                     label="NEXT ROOM →"
-                    onClick={onNextRoom}
+                    onClick={onNextRoom || (() => {})}
                 />
             )}
 

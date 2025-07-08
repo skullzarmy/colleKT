@@ -1,3 +1,5 @@
+"use client";
+
 interface GalleryWallsProps {
     wallColor?: string;
     floorColor?: string;

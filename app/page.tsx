@@ -114,6 +114,40 @@ export default function HomePage() {
                     </div>
                 </div>
             </div>
+
+            {/* Footer */}
+            <footer className="absolute left-0 right-0 text-center bottom-4">
+                <div className="space-y-1 text-xs text-gray-500">
+                    <div>
+                        ©{" "}
+                        {(() => {
+                            const currentYear = new Date().getFullYear();
+                            return currentYear > 2025 ? `2025-${currentYear}` : "2025";
+                        })()}{" "}
+                        FAFO <span className="line-through">lab</span>. All rights reserved. a{" "}
+                        <a
+                            href="https://fafolab.xyz"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-400 underline hover:text-white"
+                        >
+                            FAFO <span className="line-through">lab</span>
+                        </a>{" "}
+                        joint.
+                    </div>
+                    <div>
+                        Data provided by{" "}
+                        <a
+                            href="https://tzkt.io"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-400 underline hover:text-white"
+                        >
+                            tzkt.io
+                        </a>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 }
