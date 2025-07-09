@@ -18,48 +18,10 @@ import {
     Palette,
     Info,
 } from "lucide-react";
-
-interface NFTToken {
-    id: string;
-    token_id: string;
-    balance?: number;
-    contract: {
-        address: string;
-        alias?: string;
-    };
-    metadata?: {
-        name?: string;
-        description?: string;
-        image?: string;
-        artifact_uri?: string;
-        display_uri?: string;
-        thumbnail_uri?: string;
-        creators?: string[];
-        date?: string;
-        tags?: string[];
-        formats?: Array<{
-            uri: string;
-            mimeType: string;
-            dimensions?: {
-                value: string;
-                unit: string;
-            };
-        }>;
-        attributes?: Array<{
-            name: string;
-            value: string;
-            trait_type?: string;
-        }>;
-        rights?: string;
-        royalties?: {
-            decimals: number;
-            shares: Record<string, string>;
-        };
-    };
-}
+import { UnifiedToken } from "@/lib/data/types/token-types";
 
 interface MetadataPanelProps {
-    nft: NFTToken | null;
+    nft: UnifiedToken | null;
     onClose?: () => void;
 }
 
@@ -87,17 +49,17 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
     };
 
     const hasInteractiveContent = (): boolean => {
-        return !!(nft.metadata?.artifact_uri && isHtmlContent(nft.metadata.artifact_uri));
+        return !!(nft.metadata?.artifactUri && isHtmlContent(nft.metadata.artifactUri));
     };
 
     const getMediaType = () => {
-        const formats = nft.metadata?.formats;
-        if (!formats || formats.length === 0) return "image";
+        // No formats field in UnifiedMetadata, use simple heuristics
+        const artifactUri = nft.metadata?.artifactUri || "";
+        const lowerUri = artifactUri.toLowerCase();
 
-        const mimeType = formats[0].mimeType;
-        if (mimeType?.startsWith("video/")) return "video";
-        if (mimeType?.startsWith("audio/")) return "audio";
-        if (mimeType?.includes("model/")) return "3d";
+        if (lowerUri.includes(".mp4") || lowerUri.includes(".webm") || lowerUri.includes(".mov")) return "video";
+        if (lowerUri.includes(".mp3") || lowerUri.includes(".wav") || lowerUri.includes(".ogg")) return "audio";
+        if (lowerUri.includes(".glb") || lowerUri.includes(".gltf")) return "3d";
         return "image";
     };
 
@@ -137,7 +99,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                         <div className="flex items-center space-x-3">
                             <Palette className="w-5 h-5 text-cyan-400" />
                             <h2 className="text-lg font-bold text-white">
-                                {nft.metadata?.name || `Token #${nft.token_id}`} - Interactive View
+                                {nft.metadata?.name || `Token #${nft.tokenId}`} - Interactive View
                             </h2>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -161,10 +123,10 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                     </div>
                     <div className="h-[calc(100%-80px)] p-4">
                         <iframe
-                            src={getIPFSUrl(nft.metadata?.artifact_uri || "")}
+                            src={getIPFSUrl(nft.metadata?.artifactUri || "")}
                             className="w-full h-full border-2 border-gray-600 rounded-lg"
                             sandbox="allow-scripts allow-same-origin allow-popups"
-                            title={`Interactive content for ${nft.metadata?.name || nft.token_id}`}
+                            title={`Interactive content for ${nft.metadata?.name || nft.tokenId}`}
                         />
                     </div>
                 </Card>
@@ -175,7 +137,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                         <div className="flex items-center space-x-3">
                             {getMediaIcon()}
                             <h2 className="text-xl font-bold text-white">
-                                {nft.metadata?.name || `Token #${nft.token_id}`}
+                                {nft.metadata?.name || `Token #${nft.tokenId}`}
                             </h2>
                             {hasInteractiveContent() && (
                                 <Badge className="bg-cyan-600 hover:bg-cyan-700">Interactive</Badge>
@@ -214,10 +176,10 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
                                             <span className="font-mono text-sm text-white">
-                                                {formatAddress(nft.contract.address)}
+                                                {formatAddress(nft.contractAddress)}
                                             </span>
                                             <Button
-                                                onClick={() => copyToClipboard(nft.contract.address, "contract")}
+                                                onClick={() => copyToClipboard(nft.contractAddress, "contract")}
                                                 variant="ghost"
                                                 size="sm"
                                                 className="w-6 h-6 p-0"
@@ -229,9 +191,6 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                                 )}
                                             </Button>
                                         </div>
-                                        {nft.contract.alias && (
-                                            <p className="text-xs text-gray-400">{nft.contract.alias}</p>
-                                        )}
                                     </div>
                                 </div>
 
@@ -243,7 +202,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                     <div className="space-y-1">
                                         <div className="flex justify-between">
                                             <span className="text-xs text-gray-400">Token ID:</span>
-                                            <span className="text-sm text-white">{nft.token_id}</span>
+                                            <span className="text-sm text-white">{nft.tokenId}</span>
                                         </div>
                                         {nft.balance && (
                                             <div className="flex justify-between">
@@ -286,9 +245,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                     <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                                         {nft.metadata.attributes.map((attr, index) => (
                                             <div key={index} className="p-3 bg-gray-800 rounded">
-                                                <p className="mb-1 text-xs text-gray-400">
-                                                    {attr.trait_type || attr.name}
-                                                </p>
+                                                <p className="mb-1 text-xs text-gray-400">{attr.trait_type}</p>
                                                 <p className="text-sm font-medium text-white">{attr.value}</p>
                                             </div>
                                         ))}
@@ -314,67 +271,6 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                 </div>
                             )}
 
-                            {/* Media Formats */}
-                            {nft.metadata?.formats && nft.metadata.formats.length > 0 && (
-                                <div>
-                                    <h3 className="flex items-center mb-2 text-sm font-semibold text-gray-300">
-                                        <Info className="w-4 h-4 mr-2" />
-                                        Media Formats
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {nft.metadata.formats.map((format, index) => (
-                                            <div key={index} className="p-3 bg-gray-800 rounded">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm text-white">{format.mimeType}</span>
-                                                    <Button
-                                                        onClick={() => window.open(getIPFSUrl(format.uri), "_blank")}
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-6 text-cyan-400 hover:text-cyan-300"
-                                                    >
-                                                        <ExternalLink className="w-3 h-3" />
-                                                    </Button>
-                                                </div>
-                                                {format.dimensions && (
-                                                    <p className="text-xs text-gray-400">
-                                                        {format.dimensions.value} {format.dimensions.unit}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Rights & Royalties */}
-                            {(nft.metadata?.rights || nft.metadata?.royalties) && (
-                                <div>
-                                    <h3 className="mb-2 text-sm font-semibold text-gray-300">Rights & Royalties</h3>
-                                    <div className="p-3 space-y-2 bg-gray-800 rounded">
-                                        {nft.metadata.rights && (
-                                            <div>
-                                                <span className="text-xs text-gray-400">Rights:</span>
-                                                <p className="text-sm text-white">{nft.metadata.rights}</p>
-                                            </div>
-                                        )}
-                                        {nft.metadata.royalties && (
-                                            <div>
-                                                <span className="text-xs text-gray-400">Royalties:</span>
-                                                <p className="text-sm text-white">
-                                                    {Object.entries(nft.metadata.royalties.shares).map(
-                                                        ([address, share]) => (
-                                                            <span key={address} className="block">
-                                                                {formatAddress(address)}: {share}%
-                                                            </span>
-                                                        )
-                                                    )}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
                             {/* External Links */}
                             <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-700">
                                 {hasInteractiveContent() && (
@@ -391,7 +287,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                 <Button
                                     onClick={() =>
                                         window.open(
-                                            `https://tzkt.io/${nft.contract.address}/tokens/${nft.token_id}`,
+                                            `https://objkt.com/tokens/${nft.contractAddress}/${nft.tokenId}?ref=tz1ZzSmVcnVaWNZKJradtrDnjSjzTp6qjTEW`,
                                             "_blank"
                                         )
                                     }
@@ -400,13 +296,13 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                     className="text-gray-300 border-gray-600 hover:bg-gray-800"
                                 >
                                     <ExternalLink className="w-4 h-4 mr-2" />
-                                    View on TzKT
+                                    View on Objkt
                                 </Button>
 
-                                {nft.metadata?.artifact_uri && (
+                                {nft.metadata?.artifactUri && (
                                     <Button
                                         onClick={() => {
-                                            const uri = nft.metadata?.artifact_uri;
+                                            const uri = nft.metadata?.artifactUri;
                                             if (uri) {
                                                 window.open(getIPFSUrl(uri), "_blank");
                                             }

@@ -18,51 +18,10 @@ import {
     ZoomIn,
     ZoomOut,
 } from "lucide-react";
-
-interface NFTToken {
-    id: string;
-    token_id: string;
-    balance?: number;
-    contract: {
-        address: string;
-        alias?: string;
-    };
-    metadata?: {
-        name?: string;
-        description?: string;
-        image?: string;
-        artifact_uri?: string;
-        artifactUri?: string; // Support camelCase
-        display_uri?: string;
-        displayUri?: string; // Support camelCase
-        thumbnail_uri?: string;
-        thumbnailUri?: string; // Support camelCase
-        creators?: string[];
-        date?: string;
-        tags?: string[];
-        formats?: Array<{
-            uri: string;
-            mimeType: string;
-            dimensions?: {
-                value: string;
-                unit: string;
-            };
-        }>;
-        attributes?: Array<{
-            name: string;
-            value: string;
-            trait_type?: string;
-        }>;
-        rights?: string;
-        royalties?: {
-            decimals: number;
-            shares: Record<string, string>;
-        };
-    };
-}
+import { UnifiedToken } from "@/lib/data/types/token-types";
 
 interface MediaModalProps {
-    nft: NFTToken | null;
+    nft: UnifiedToken | null;
     onClose?: () => void;
 }
 
@@ -74,6 +33,10 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const [zoom, setZoom] = useState(1);
     const [detectedMediaType, setDetectedMediaType] = useState<string | null>(null);
     const [isDetecting, setIsDetecting] = useState(false);
+    // Contract alias now comes directly from nft.contractAlias - no need for separate state/fetch
+    const [artistAliases, setArtistAliases] = useState<{ [address: string]: string | null }>({});
+    const [isLoadingArtistAliases, setIsLoadingArtistAliases] = useState(false);
+    // Removed collectionInfo state - we get alias directly from nft.contractAlias now
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -90,12 +53,107 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             setZoom(1);
             setDetectedMediaType(null);
             setIsDetecting(false);
+            // Contract alias now comes directly from nft.contractAlias - no reset needed
+            setArtistAliases({});
+            setIsLoadingArtistAliases(false);
         }
     }, [nft?.id]);
+
+    // Fetch artist alias from TzKT accounts endpoint
+    const fetchArtistAlias = async (artistAddress: string): Promise<string | null> => {
+        try {
+            const response = await fetch(`https://api.tzkt.io/v1/accounts/${artistAddress}`);
+            if (!response.ok) {
+                console.error(`❌ Artist API failed with status ${response.status}: ${response.statusText}`);
+                return null;
+            }
+
+            const account = await response.json();
+
+            const alias = account.alias || null;
+            return alias;
+        } catch (error) {
+            console.error("❌ Failed to fetch artist alias:", error);
+            console.error("❌ Artist address was:", artistAddress);
+            return null;
+        }
+    };
+
+    // Fetch collection information using DIRECT API - FUCK THE SDK
+    const fetchCollectionInfo = async (
+        contractAddress: string
+    ): Promise<{
+        name?: string;
+        alias?: string;
+        creator?: { alias?: string; address?: string };
+        kind?: string;
+        tzips?: string[];
+    } | null> => {
+        try {
+            const response = await fetch(`https://api.tzkt.io/v1/contracts/${contractAddress}`);
+
+            if (!response.ok) {
+                console.error(`❌ DIRECT API failed with status ${response.status}: ${response.statusText}`);
+                return null;
+            }
+
+            const contract = await response.json();
+
+            const result = {
+                name: contract.metadata?.name || undefined,
+                alias: contract.alias || undefined,
+                creator: contract.creator || undefined,
+                kind: contract.kind || undefined,
+                tzips: contract.tzips || undefined,
+            };
+
+            return result;
+        } catch (error) {
+            console.error("❌ Failed to fetch collection info via DIRECT API:", error);
+            console.error("❌ Contract address was:", contractAddress);
+            return null;
+        }
+    };
+
+    // Effect to fetch artist aliases when NFT changes
+    useEffect(() => {
+        if (nft?.metadata?.creators && nft.metadata.creators.length > 0) {
+            setIsLoadingArtistAliases(true);
+
+            // Fetch aliases for all creators
+            Promise.all(
+                nft.metadata.creators.map(async (creatorAddress) => {
+                    if (artistAliases[creatorAddress] !== undefined) {
+                        return [creatorAddress, artistAliases[creatorAddress]];
+                    }
+                    const alias = await fetchArtistAlias(creatorAddress);
+                    return [creatorAddress, alias];
+                })
+            )
+                .then((results) => {
+                    const newAliases = Object.fromEntries(results);
+                    setArtistAliases(newAliases);
+                    setIsLoadingArtistAliases(false);
+                })
+                .catch(() => {
+                    setIsLoadingArtistAliases(false);
+                });
+        }
+    }, [nft?.metadata?.creators]);
 
     // Actually detect the media type by fetching headers
     const detectActualMediaType = async (uri: string): Promise<string> => {
         try {
+            // Handle base64 data URIs
+            if (uri.startsWith("data:")) {
+                const mimeType = uri.split(";")[0].split(":")[1];
+                if (mimeType.startsWith("image/")) return "image";
+                if (mimeType.startsWith("video/")) return "video";
+                if (mimeType.startsWith("audio/")) return "audio";
+                if (mimeType.includes("text/html")) return "html";
+                return "image"; // Default for data URIs
+            }
+
             const response = await fetch(uri, { method: "HEAD" });
             const contentType = response.headers.get("content-type") || "";
 
@@ -138,13 +196,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     useEffect(() => {
         if (!nft) return; // Guard clause inside the effect
 
-        const rawUri =
-            nft.metadata?.artifact_uri ||
-            nft.metadata?.artifactUri ||
-            nft.metadata?.display_uri ||
-            nft.metadata?.displayUri ||
-            nft.metadata?.image ||
-            nft.metadata?.formats?.[0]?.uri;
+        const rawUri = nft.metadata?.artifactUri || nft.metadata?.displayUri || nft.metadata?.image;
 
         if (rawUri && !isDetecting && !detectedMediaType) {
             setIsDetecting(true);
@@ -165,9 +217,21 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         }
     }, [nft?.id, isDetecting, detectedMediaType]);
 
-    if (!nft) return null;
+    if (!nft) return null; // Collection name with direct API alias - no fetching needed!
+    const getCollectionDisplayName = () => {
+        // Primary: use the contract alias from the main API fetch (now correct!)
+        if (nft.contractAlias) return nft.contractAlias;
+
+        // Final fallback to truncated address
+        return `${nft.contractAddress.slice(0, 8)}...${nft.contractAddress.slice(-4)}`;
+    };
 
     const getIPFSUrl = (uri: string, preferStandardGateway = false) => {
+        // Don't modify base64 data URIs
+        if (uri.startsWith("data:")) {
+            return uri;
+        }
+
         if (uri.startsWith("ipfs://")) {
             // Preserve everything after ipfs:// including query parameters
             const withoutProtocol = uri.replace("ipfs://", "");
@@ -183,16 +247,14 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     };
     const getRawMediaUri = () => {
         // Get raw URI without gateway conversion first
-        // Handle both snake_case and camelCase property names
-        const artifact = nft.metadata?.artifact_uri || nft.metadata?.artifactUri;
-        const display = nft.metadata?.display_uri || nft.metadata?.displayUri;
+        // Handle UnifiedToken camelCase property names
+        const artifact = nft.metadata?.artifactUri;
+        const display = nft.metadata?.displayUri;
         const image = nft.metadata?.image;
-        const format = nft.metadata?.formats?.[0]?.uri;
 
         if (artifact) return artifact;
         if (display) return display;
         if (image) return image;
-        if (format) return format;
         return null;
     };
 
@@ -239,25 +301,16 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         return false;
     };
     const getMediaType = () => {
-        const formats = nft.metadata?.formats;
         const rawUri = getRawMediaUri() || "";
 
-        // Check formats first for MIME type
-        if (formats && formats.length > 0) {
-            const mimeType = formats[0].mimeType.toLowerCase();
-
-            if (mimeType.startsWith("video/")) {
-                return "video";
-            }
-            if (mimeType.startsWith("audio/")) {
-                return "audio";
-            }
-            if (isHtmlContent(rawUri, mimeType)) {
-                return "html";
-            }
-            if (mimeType.includes("model/") || mimeType.includes("application/octet-stream")) {
-                return "3d";
-            }
+        // Handle base64 data URIs first
+        if (rawUri.startsWith("data:")) {
+            const mimeType = rawUri.split(";")[0].split(":")[1].toLowerCase();
+            if (mimeType.startsWith("video/")) return "video";
+            if (mimeType.startsWith("audio/")) return "audio";
+            if (mimeType.startsWith("image/")) return "image";
+            if (mimeType.includes("text/html")) return "html";
+            return "image"; // Default for data URIs
         }
 
         // Fallback detection based on URI
@@ -334,10 +387,9 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                     <div className="max-w-md space-y-1 text-xs text-center text-gray-500">
                         <p>NFT ID: {nft?.id || "Unknown"}</p>
                         <p>Has metadata: {nft?.metadata ? "Yes" : "No"}</p>
-                        {nft.metadata?.artifact_uri && <p>Artifact URI: {nft.metadata.artifact_uri.slice(0, 50)}...</p>}
-                        {nft.metadata?.display_uri && <p>Display URI: {nft.metadata.display_uri.slice(0, 50)}...</p>}
+                        {nft.metadata?.artifactUri && <p>Artifact URI: {nft.metadata.artifactUri.slice(0, 50)}...</p>}
+                        {nft.metadata?.displayUri && <p>Display URI: {nft.metadata.displayUri.slice(0, 50)}...</p>}
                         {nft.metadata?.image && <p>Image URI: {nft.metadata.image.slice(0, 50)}...</p>}
-                        {nft.metadata?.formats?.[0] && <p>Format: {nft.metadata.formats[0].mimeType}</p>}
                     </div>
                 </div>
             );
@@ -361,7 +413,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             src={mediaUri}
                             className="w-full h-full border-0"
                             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                            title={`Interactive content for ${nft.metadata?.name || nft.token_id}`}
+                            title={`Interactive content for ${nft.metadata?.name || nft.tokenId}`}
                             style={{
                                 minHeight: isFullscreen ? "100vh" : "400px",
                             }}
@@ -373,7 +425,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     onClick={toggleFullscreen}
                                     size="sm"
                                     variant="secondary"
-                                    className="text-white bg-black/50 hover:bg-black/70 border-white/20"
+                                    className="text-white bg-black/80 hover:bg-black/90 border-white/30 hover:border-white/50"
                                 >
                                     <Maximize2 size={16} />
                                 </Button>
@@ -398,10 +450,20 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             style={{ transform: `scale(${zoom})` }}
                         />
                         <div className="absolute flex gap-2 bottom-4 left-4">
-                            <Button onClick={togglePlay} size="sm" variant="secondary">
+                            <Button
+                                onClick={togglePlay}
+                                size="sm"
+                                variant="secondary"
+                                className="text-white bg-black/80 hover:bg-black/90 border-white/30 hover:border-white/50"
+                            >
                                 {isPlaying ? <Pause size={16} /> : <Play size={16} />}
                             </Button>
-                            <Button onClick={toggleMute} size="sm" variant="secondary">
+                            <Button
+                                onClick={toggleMute}
+                                size="sm"
+                                variant="secondary"
+                                className="text-white bg-black/80 hover:bg-black/90 border-white/30 hover:border-white/50"
+                            >
                                 {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                             </Button>
                         </div>
@@ -423,10 +485,20 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                 className="hidden"
                             />
                             <div className="flex gap-2">
-                                <Button onClick={togglePlay} size="lg" variant="secondary">
+                                <Button
+                                    onClick={togglePlay}
+                                    size="lg"
+                                    variant="secondary"
+                                    className="text-white bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-gray-500"
+                                >
                                     {isPlaying ? <Pause size={20} /> : <Play size={20} />}
                                 </Button>
-                                <Button onClick={toggleMute} size="lg" variant="secondary">
+                                <Button
+                                    onClick={toggleMute}
+                                    size="lg"
+                                    variant="secondary"
+                                    className="text-white bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-gray-500"
+                                >
                                     {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                                 </Button>
                             </div>
@@ -442,7 +514,11 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                 <div className="text-4xl text-white">🎲</div>
                             </div>
                             <p className="mb-4 text-white">3D Model</p>
-                            <Button onClick={() => window.open(mediaUri, "_blank")} variant="secondary">
+                            <Button
+                                onClick={() => window.open(mediaUri, "_blank")}
+                                variant="secondary"
+                                className="text-white bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-gray-500"
+                            >
                                 <ExternalLink size={16} className="mr-2" />
                                 Open 3D Model
                             </Button>
@@ -455,19 +531,34 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                     <div className={containerClass}>
                         <img
                             src={mediaUri}
-                            alt={nft.metadata?.name || `Token #${nft.token_id}`}
+                            alt={nft.metadata?.name || `Token #${nft.tokenId}`}
                             className="object-contain max-w-full max-h-full"
                             style={{ transform: `scale(${zoom})` }}
                         />
                         {mediaType === "image" && (
                             <div className="absolute flex gap-2 bottom-4 left-4">
-                                <Button onClick={handleZoomIn} size="sm" variant="secondary">
+                                <Button
+                                    onClick={handleZoomIn}
+                                    size="sm"
+                                    variant="secondary"
+                                    className="text-white bg-black/80 hover:bg-black/90 border-white/30 hover:border-white/50"
+                                >
                                     <ZoomIn size={16} />
                                 </Button>
-                                <Button onClick={handleZoomOut} size="sm" variant="secondary">
+                                <Button
+                                    onClick={handleZoomOut}
+                                    size="sm"
+                                    variant="secondary"
+                                    className="text-white bg-black/80 hover:bg-black/90 border-white/30 hover:border-white/50"
+                                >
                                     <ZoomOut size={16} />
                                 </Button>
-                                <Button onClick={handleZoomReset} size="sm" variant="secondary">
+                                <Button
+                                    onClick={handleZoomReset}
+                                    size="sm"
+                                    variant="secondary"
+                                    className="text-white bg-black/80 hover:bg-black/90 border-white/30 hover:border-white/50"
+                                >
                                     <RotateCcw size={16} />
                                 </Button>
                             </div>
@@ -482,11 +573,30 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             <div className={`${isFullscreen ? "p-0" : "p-4"} w-full h-full flex flex-col`}>
                 {/* Header Controls */}
                 <div className="flex items-center justify-between p-4 bg-black/50 backdrop-blur-md">
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-xl font-bold text-white">
-                            {nft.metadata?.name || `Token #${nft.token_id}`}
-                        </h2>
-                        <Badge variant="outline" className="text-gray-300 border-gray-600">
+                    <div className="flex items-start gap-3">
+                        <div>
+                            <h2 className="text-xl font-bold text-white">
+                                {nft.metadata?.name || `Token #${nft.tokenId}`}
+                            </h2>
+                            {/* Show artist name in the byline */}
+                            {nft.metadata?.creators && nft.metadata.creators.length > 0 && (
+                                <p className="mt-1 text-sm text-gray-400">
+                                    from{" "}
+                                    <button
+                                        onClick={() =>
+                                            window.open(`https://tzkt.io/${nft.metadata?.creators?.[0]}`, "_blank")
+                                        }
+                                        className="text-gray-300 underline hover:text-white"
+                                    >
+                                        {isLoadingArtistAliases
+                                            ? "Loading..."
+                                            : artistAliases[nft.metadata.creators[0]] ||
+                                              `${nft.metadata.creators[0].slice(0, 8)}...`}
+                                    </button>
+                                </p>
+                            )}
+                        </div>
+                        <Badge variant="outline" className="mt-1 text-gray-300 border-gray-600">
                             {mediaType.toUpperCase()}
                         </Badge>
                     </div>
@@ -496,7 +606,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             onClick={() => setShowMetadata(!showMetadata)}
                             variant="ghost"
                             size="sm"
-                            className="text-gray-300 hover:text-white"
+                            className="text-white border bg-black/20 hover:bg-black/40 hover:text-white border-white/20 hover:border-white/40"
                         >
                             <Info size={16} className="mr-2" />
                             {showMetadata ? "Hide" : "Show"} Details
@@ -506,7 +616,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             onClick={toggleFullscreen}
                             variant="ghost"
                             size="sm"
-                            className="text-gray-300 hover:text-white"
+                            className="text-white border bg-black/20 hover:bg-black/40 hover:text-white border-white/20 hover:border-white/40"
                         >
                             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                         </Button>
@@ -516,7 +626,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                 onClick={() => window.open(mediaUri, "_blank")}
                                 variant="ghost"
                                 size="sm"
-                                className="text-gray-300 hover:text-white"
+                                className="text-white border bg-black/20 hover:bg-black/40 hover:text-white border-white/20 hover:border-white/40"
                             >
                                 <Download size={16} />
                             </Button>
@@ -526,7 +636,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             onClick={onClose || (() => {})}
                             variant="ghost"
                             size="sm"
-                            className="text-gray-300 hover:text-white"
+                            className="text-white border bg-black/20 hover:bg-black/40 hover:text-white border-white/20 hover:border-white/40"
                         >
                             <X size={16} />
                         </Button>
@@ -551,26 +661,87 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             <div className="p-6">
                                 <h3 className="mb-4 text-lg font-semibold text-white">Details</h3>
 
-                                {/* Quick Info */}
-                                <div className="mb-6 space-y-3">
-                                    {nft.metadata?.description && (
-                                        <div>
-                                            <p className="text-sm leading-relaxed text-gray-300">
-                                                {nft.metadata.description}
-                                            </p>
+                                {/* Artist Info - First priority */}
+                                {nft.metadata?.creators && nft.metadata.creators.length > 0 && (
+                                    <div className="p-4 mb-6 rounded-lg bg-gray-800/50">
+                                        <h4 className="mb-3 text-sm font-semibold text-gray-300">Artist</h4>
+                                        <div className="space-y-2">
+                                            {nft.metadata.creators.map((creatorAddress, index) => (
+                                                <div key={creatorAddress} className="flex items-center justify-between">
+                                                    <span className="text-sm text-white">
+                                                        {isLoadingArtistAliases
+                                                            ? "Loading..."
+                                                            : artistAliases[creatorAddress] ||
+                                                              `${creatorAddress.slice(0, 12)}...`}
+                                                    </span>
+                                                    <button
+                                                        onClick={() =>
+                                                            window.open(`https://tzkt.io/${creatorAddress}`, "_blank")
+                                                        }
+                                                        className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                                                    >
+                                                        <ExternalLink size={12} />
+                                                        <span>View Profile</span>
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
-                                    )}
+                                    </div>
+                                )}
 
+                                {/* Collection Info */}
+                                <div className="p-4 mb-6 rounded-lg bg-gray-800/50">
+                                    <h4 className="mb-3 text-sm font-semibold text-gray-300">Collection</h4>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-white">{getCollectionDisplayName()}</span>
+                                            <button
+                                                onClick={() =>
+                                                    window.open(`https://tzkt.io/${nft.contractAddress}`, "_blank")
+                                                }
+                                                className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                                            >
+                                                <ExternalLink size={12} />
+                                                <span>View Contract</span>
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <span className="block text-xs text-gray-400">Contract:</span>
+                                            <span className="font-mono text-xs text-gray-300">
+                                                {nft.contractAddress}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* NFT Description */}
+                                {nft.metadata?.description && (
+                                    <div className="mb-6">
+                                        <h4 className="mb-2 text-sm font-semibold text-gray-300">Description</h4>
+                                        <p className="text-sm leading-relaxed text-gray-300">
+                                            {nft.metadata.description}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Token Info */}
+                                <div className="mb-6 space-y-3">
                                     <div className="flex justify-between">
                                         <span className="text-xs text-gray-400">Token ID:</span>
-                                        <span className="text-sm text-white">{nft.token_id}</span>
+                                        <span className="font-mono text-sm text-white">{nft.tokenId}</span>
                                     </div>
-
-                                    {nft.metadata?.creators && nft.metadata.creators.length > 0 && (
-                                        <div>
-                                            <span className="block mb-1 text-xs text-gray-400">Creator:</span>
-                                            <span className="font-mono text-sm text-white">
-                                                {nft.metadata.creators[0].slice(0, 8)}...
+                                    <div className="flex justify-between">
+                                        <span className="text-xs text-gray-400">Standard:</span>
+                                        <span className="text-sm text-white">
+                                            {nft.standard?.toUpperCase() || "Unknown"}
+                                        </span>
+                                    </div>
+                                    {nft.balance && (
+                                        <div className="flex justify-between">
+                                            <span className="text-xs text-gray-400">Owned:</span>
+                                            <span className="text-sm text-white">
+                                                {nft.balance}
+                                                {nft.metadata?.supply && ` / ${nft.metadata.supply}`}
                                             </span>
                                         </div>
                                     )}
@@ -583,9 +754,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                         <div className="grid grid-cols-1 gap-2">
                                             {nft.metadata.attributes.map((attr, index) => (
                                                 <div key={index} className="p-2 bg-gray-800 rounded">
-                                                    <p className="text-xs text-gray-400">
-                                                        {attr.trait_type || attr.name}
-                                                    </p>
+                                                    <p className="text-xs text-gray-400">{attr.trait_type}</p>
                                                     <p className="text-sm text-white">{attr.value}</p>
                                                 </div>
                                             ))}
@@ -598,18 +767,63 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     <Button
                                         onClick={() =>
                                             window.open(
-                                                `https://tzkt.io/${nft.contract.address}/tokens/${nft.token_id}`,
+                                                `https://objkt.com/tokens/${nft.contractAddress}/${nft.tokenId}?ref=tz1ZzSmVcnVaWNZKJradtrDnjSjzTp6qjTEW`,
                                                 "_blank"
                                             )
                                         }
                                         variant="outline"
                                         size="sm"
-                                        className="w-full text-gray-300 border-gray-600 hover:bg-gray-800"
+                                        className="w-full text-white bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-gray-500 hover:text-white"
                                     >
                                         <ExternalLink className="w-4 h-4 mr-2" />
-                                        View on TzKT
+                                        View on Objkt
                                     </Button>
                                 </div>
+
+                                {/* Debug Info - Collapsible */}
+                                <details className="mt-6">
+                                    <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400">
+                                        Debug Information
+                                    </summary>
+                                    <div className="p-3 mt-2 space-y-1 font-mono text-xs rounded bg-gray-800/30">
+                                        <div>
+                                            <span className="text-gray-400">ID:</span>{" "}
+                                            <span className="text-gray-200">{nft.id}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-400">Contract:</span>{" "}
+                                            <span className="text-gray-200">{nft.contractAddress}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-400">Token ID:</span>{" "}
+                                            <span className="text-gray-200">{nft.tokenId}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-400">Source:</span>{" "}
+                                            <span className="text-gray-200">{nft.source?.provider || "unknown"}</span>
+                                        </div>
+                                        {nft.fetchedAt && (
+                                            <div>
+                                                <span className="text-gray-400">Fetched:</span>{" "}
+                                                <span className="text-gray-200">
+                                                    {new Date(nft.fetchedAt).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <span className="text-gray-400">Has Image:</span>{" "}
+                                            <span className="text-gray-200">{nft.hasImage ? "Yes" : "No"}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-400">Has Metadata:</span>{" "}
+                                            <span className="text-gray-200">{nft.hasMetadata ? "Yes" : "No"}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-400">Valid:</span>{" "}
+                                            <span className="text-gray-200">{nft.isValid ? "Yes" : "No"}</span>
+                                        </div>
+                                    </div>
+                                </details>
                             </div>
                         </div>
                     )}

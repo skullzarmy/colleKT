@@ -4,9 +4,11 @@ import { useEffect, useState, Component } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 import { useViewState } from "@/contexts/ViewStateContext";
 import { useTezosDomain } from "@/hooks/use-tezos-domain";
+import { collektClient } from "@/lib/data/sources/collekt-client";
+import { UnifiedToken } from "@/lib/data/types/token-types";
 import * as THREE from "three";
 
 // Dynamically import Gallery3D with no SSR to prevent hydration issues
@@ -26,32 +28,6 @@ const Gallery3D = dynamic(() => import("@/components/Gallery3D"), {
 const MediaModal = dynamic(() => import("@/components/media-modal"), {
     ssr: false,
 });
-
-interface NFTToken {
-    id: string;
-    token_id: string;
-    balance?: number;
-    contract: {
-        address: string;
-        alias?: string;
-    };
-    metadata?: {
-        name?: string;
-        description?: string;
-        image?: string;
-        artifact_uri?: string;
-        display_uri?: string;
-        thumbnail_uri?: string;
-        formats?: Array<{
-            uri: string;
-            mimeType: string;
-        }>;
-        attributes?: Array<{
-            name: string;
-            value: string;
-        }>;
-    };
-}
 
 // Error Boundary Component
 class ErrorBoundary extends Component<
@@ -81,16 +57,14 @@ class ErrorBoundary extends Component<
 }
 
 // Simple 2D Gallery Fallback
-function Simple2DGallery({ nfts, onNFTSelect }: { nfts: NFTToken[]; onNFTSelect: (nft: NFTToken) => void }) {
-    const getImageUri = (nft: NFTToken) => {
-        const metadata = nft.metadata;
-        if (!metadata) return null;
+function Simple2DGallery({ nfts, onNFTSelect }: { nfts: UnifiedToken[]; onNFTSelect: (nft: UnifiedToken) => void }) {
+    const getImageUri = (nft: UnifiedToken) => {
         return (
-            metadata.display_uri ||
-            metadata.image ||
-            metadata.artifact_uri ||
-            metadata.thumbnail_uri ||
-            metadata.formats?.[0]?.uri
+            nft.displayImage ||
+            nft.metadata?.displayUri ||
+            nft.metadata?.artifactUri ||
+            nft.metadata?.image ||
+            nft.metadata?.thumbnailUri
         );
     };
 
@@ -118,7 +92,7 @@ function Simple2DGallery({ nfts, onNFTSelect }: { nfts: NFTToken[]; onNFTSelect:
                                 {imageUri ? (
                                     <img
                                         src={getIPFSUrl(imageUri)}
-                                        alt={nft.metadata?.name || `Token #${nft.token_id}`}
+                                        alt={nft.metadata?.name || `Token #${nft.tokenId}`}
                                         className="object-cover w-full h-full"
                                         crossOrigin="anonymous"
                                         onError={(e) => {
@@ -138,11 +112,9 @@ function Simple2DGallery({ nfts, onNFTSelect }: { nfts: NFTToken[]; onNFTSelect:
                             </div>
                             <div className="p-3">
                                 <h3 className="text-sm font-medium text-white truncate">
-                                    {nft.metadata?.name || `Token #${nft.token_id}`}
+                                    {nft.metadata?.name || `Token #${nft.tokenId}`}
                                 </h3>
-                                <p className="mt-1 text-xs text-gray-400">
-                                    {nft.contract.alias || `${nft.contract.address.slice(0, 8)}...`}
-                                </p>
+                                <p className="mt-1 text-xs text-gray-400">{nft.contractAddress.slice(0, 8)}...</p>
                             </div>
                         </div>
                     );
@@ -156,28 +128,11 @@ export default function GalleryPage() {
     const params = useParams();
     const router = useRouter();
     const address = params.address as string;
-
-    console.log("📄 PAGE COMPONENT RENDER:", {
-        address,
-        addressType: typeof address,
-        addressLength: address?.length,
-        params,
-        timestamp: new Date().toISOString(),
-    });
-
     const { domain, isLoading: domainLoading, displayName } = useTezosDomain(address);
-
-    console.log("🏠 DOMAIN HOOK RESULT:", {
-        domain,
-        domainLoading,
-        displayName,
-        address,
-        timestamp: new Date().toISOString(),
-    });
-    const [nfts, setNfts] = useState<NFTToken[]>([]);
+    const [nfts, setNfts] = useState<UnifiedToken[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedNFT, setSelectedNFT] = useState<NFTToken | null>(null);
+    const [selectedNFT, setSelectedNFT] = useState<UnifiedToken | null>(null);
     const [use3D, setUse3D] = useState(true);
     const [galleryError, setGalleryError] = useState<string | null>(null);
     const [loadingProgress, setLoadingProgress] = useState<string>("Fetching NFTs...");
@@ -187,6 +142,56 @@ export default function GalleryPage() {
 
     // Use shared view state instead of local state
     const { cameraMode, setCameraMode } = useViewState();
+
+    // Refresh handler to force cache rebuild
+    const handleRefresh = async () => {
+        setLoading(true);
+        setLoadingProgress("Clearing cache...");
+        setNfts([]);
+        setPreloadedTextures(new Map());
+
+        try {
+            // First, clear all cache entries for this address
+            await fetch("/api/cache/clear", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    address,
+                    clearAll: true, // Clear ALL cache entries, not just current filter
+                }),
+            });
+
+            setLoadingProgress("Fetching fresh data...");
+
+            const result = await collektClient.getTokenCollection({
+                address,
+                page: 1,
+                pageSize: 20,
+                forceRefresh: true, // This will force a fresh fetch and rebuild cache
+            });
+
+            if (result.success && result.data) {
+                const { tokens, pagination } = result.data;
+                setTotalNFTs(pagination.totalItems);
+
+                // Process NFTs
+                const filteredTokens = tokens.filter((token: any) => {
+                    const hasMetadata = token.metadata;
+                    const hasBalance = token.balance > 0;
+                    return hasMetadata && hasBalance;
+                });
+
+                setNfts(filteredTokens);
+                setLoadingProgress("Preloading textures...");
+                await preloadTextures(filteredTokens, 0, pagination.totalItems);
+            }
+        } catch (err) {
+            console.error("Error refreshing collection:", err);
+            setError("Failed to refresh collection. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Update page title when domain loads
     useEffect(() => {
@@ -227,72 +232,41 @@ export default function GalleryPage() {
 
                 const NFTS_PER_ROOM = 20;
                 const roomNumber = currentRoom; // 0-based
-                const offset = roomNumber * NFTS_PER_ROOM;
-
-                setLoadingProgress(`Fetching total collection count...`);
-
-                // Get total count using the dedicated count endpoint
-                const countResponse = await fetch(
-                    `https://api.tzkt.io/v1/tokens/balances/count?account=${address}&balance.gt=0&token.metadata.ne=null`
-                );
-
-                if (!countResponse.ok) {
-                    throw new Error(`Failed to fetch total count: ${countResponse.status} ${countResponse.statusText}`);
-                }
-
-                const totalCount = await countResponse.json();
-                setTotalNFTs(totalCount);
+                const pageNumber = roomNumber + 1; // 1-based for API
 
                 setLoadingProgress(`Fetching room ${roomNumber + 1}...`);
 
-                // Then fetch NFTs for this specific page
-                const response = await fetch(
-                    `https://api.tzkt.io/v1/tokens/balances?account=${address}&balance.gt=0&token.metadata.ne=null&select=balance,token&limit=${NFTS_PER_ROOM}&offset=${offset}`
-                );
+                // Use collektClient instead of direct TzKT calls
+                const result = await collektClient.getTokenCollection({
+                    address,
+                    page: pageNumber,
+                    pageSize: NFTS_PER_ROOM,
+                });
 
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch NFTs: ${response.status} ${response.statusText}`);
+                if (!result.success) {
+                    throw new Error(result.error || "Failed to fetch NFTs");
                 }
 
-                const data = await response.json();
+                const { tokens, pagination } = result.data!;
+                setTotalNFTs(pagination.totalItems);
 
                 // If we're on an invalid page, redirect to page 1
-                if (offset >= totalCount && totalCount > 0) {
+                if (pageNumber > pagination.totalPages && pagination.totalPages > 0) {
                     updateRoomInUrl(0);
                     return;
                 }
 
-                // Process NFTs
-                const processedNFTs = data
-                    .filter((item: any) => {
-                        const hasMetadata = item.token?.metadata;
-                        const hasBalance = item.balance > 0;
-                        return hasMetadata && hasBalance;
-                    })
-                    .map((item: any) => {
-                        const nft = {
-                            id: `${item.token.contract.address}_${item.token.tokenId}`,
-                            token_id: item.token.tokenId,
-                            balance: item.balance,
-                            contract: {
-                                address: item.token.contract.address,
-                                alias: item.token.contract.alias,
-                            },
-                            metadata: item.token.metadata,
-                        };
+                // Process NFTs - they should already be in UnifiedToken format from server
+                const filteredTokens = tokens.filter((token: any) => {
+                    const hasMetadata = token.metadata;
+                    const hasBalance = token.balance > 0;
+                    return hasMetadata && hasBalance;
+                });
 
-                        // Log metadata for problematic NFTs only
-                        if (!getImageUri(nft)) {
-                            // Skip logging for now to reduce console noise
-                        }
-
-                        return nft;
-                    });
-
-                setNfts(processedNFTs);
+                setNfts(filteredTokens);
 
                 // Preload textures for this room
-                await preloadTextures(processedNFTs, 0, totalCount); // Pass totalCount to preloadTextures
+                await preloadTextures(filteredTokens, 0, pagination.totalItems);
             } catch (err) {
                 console.error("Error fetching NFTs:", err);
                 setError("Failed to load your NFT collection. Please check the address and try again.");
@@ -304,7 +278,7 @@ export default function GalleryPage() {
         fetchNFTsForPage();
     }, [address, currentRoom]);
 
-    const preloadTextures = async (nftList: NFTToken[], targetRoom: number = 0, totalNFTCount?: number) => {
+    const preloadTextures = async (nftList: UnifiedToken[], targetRoom: number = 0, totalNFTCount?: number) => {
         setLoadingProgress("Preloading images...");
         const textureMap = new Map<string, THREE.Texture>();
 
@@ -330,17 +304,17 @@ export default function GalleryPage() {
         setLoading(false);
     };
 
-    const loadTextureWithFallback = async (nft: NFTToken): Promise<THREE.Texture | null> => {
+    const loadTextureWithFallback = async (nft: UnifiedToken): Promise<THREE.Texture | null> => {
         const metadata = nft.metadata;
         if (!metadata) return null;
 
         // Get all possible URIs in priority order
         const possibleUris = [
-            { uri: metadata.display_uri, source: "display_uri" },
+            { uri: nft.displayImage, source: "displayImage" },
+            { uri: metadata.displayUri, source: "displayUri" },
             { uri: metadata.image, source: "image" },
-            { uri: metadata.thumbnail_uri, source: "thumbnail_uri" },
-            { uri: metadata.artifact_uri, source: "artifact_uri" },
-            { uri: metadata.formats?.[0]?.uri, source: "formats[0].uri" },
+            { uri: metadata.thumbnailUri, source: "thumbnailUri" },
+            { uri: metadata.artifactUri, source: "artifactUri" },
             // Additional fallbacks for different standards
             { uri: (metadata as any).displayUri, source: "displayUri" },
             { uri: (metadata as any).thumbnailUri, source: "thumbnailUri" },
@@ -409,28 +383,21 @@ export default function GalleryPage() {
         return hasImageExtension && !isHtml;
     };
 
-    const getImageUri = (nft: NFTToken) => {
+    const getImageUri = (nft: UnifiedToken) => {
         const metadata = nft.metadata;
         if (!metadata) return null;
 
         // All possible URIs with their sources
         const possibleUris = [
-            { uri: metadata.display_uri, source: "display_uri" },
+            { uri: nft.displayImage, source: "displayImage" },
+            { uri: metadata.displayUri, source: "displayUri" },
             { uri: metadata.image, source: "image" },
-            { uri: metadata.thumbnail_uri, source: "thumbnail_uri" },
-            { uri: metadata.artifact_uri, source: "artifact_uri" },
-            { uri: metadata.formats?.[0]?.uri, source: "formats[0].uri" },
-            // Additional fallbacks for different standards
-            { uri: (metadata as any).displayUri, source: "displayUri" },
-            { uri: (metadata as any).thumbnailUri, source: "thumbnailUri" },
-            { uri: (metadata as any).imageUri, source: "imageUri" },
-            { uri: (metadata as any).artifactUri, source: "artifactUri" },
-            { uri: (metadata as any).media?.[0]?.uri, source: "media[0].uri" },
-            { uri: (metadata as any).assets?.[0]?.uri, source: "assets[0].uri" },
+            { uri: metadata.thumbnailUri, source: "thumbnailUri" },
+            { uri: metadata.artifactUri, source: "artifactUri" },
         ].filter((item) => item.uri && typeof item.uri === "string");
 
         // First, try to find URIs that are likely images
-        const imageUris = possibleUris.filter((item) => isImageUri(item.uri));
+        const imageUris = possibleUris.filter((item) => item.uri && isImageUri(item.uri));
 
         if (imageUris.length > 0) {
             return imageUris[0].uri;
@@ -509,6 +476,15 @@ export default function GalleryPage() {
                     <div className="px-4 py-2 text-sm text-white rounded-lg bg-black/50 backdrop-blur-sm">
                         {totalNFTs > 0 ? `${nfts.length} of ${totalNFTs} NFTs loaded` : `${nfts.length} NFTs found`}
                     </div>
+                    <Button
+                        onClick={handleRefresh}
+                        variant="outline"
+                        className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
+                        disabled={loading}
+                        title="Refresh collection and rebuild cache"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                    </Button>
                     {galleryError && (
                         <Button
                             onClick={() => setUse3D(!use3D)}

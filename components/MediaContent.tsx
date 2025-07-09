@@ -35,12 +35,15 @@ export default function MediaContent({ uri, mimeType }: MediaContentProps) {
                 setLoading(true);
                 setError(false);
 
-                // Convert IPFS URIs to gateway URLs
+                // Convert IPFS URIs to gateway URLs, but leave data URIs unchanged
                 let mediaUrl = uri;
                 if (uri.startsWith("ipfs://")) {
                     // Extract CID and preserve any query parameters
                     const withoutProtocol = uri.replace("ipfs://", "");
                     mediaUrl = `https://ipfs.fileship.xyz/${withoutProtocol}`;
+                } else if (uri.startsWith("data:")) {
+                    // Keep base64 data URIs as-is
+                    mediaUrl = uri;
                 }
 
                 // Determine media type

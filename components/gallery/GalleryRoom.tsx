@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useState, useEffect } from "react";
-import { NFTToken } from "../../lib/nft";
+import { UnifiedToken } from "../../lib/data/types/token-types";
 import NFTFrame from "../nft-frame";
 import GalleryLighting from "./environment/GalleryLighting";
 import GalleryWalls from "./environment/GalleryWalls";
@@ -14,20 +14,20 @@ import { CameraMode } from "./ui/CameraModeSelector";
 import { getImageDimensions, getIPFSUrl } from "../../lib/utils";
 
 interface GalleryRoomProps {
-    nfts: NFTToken[];
+    nfts: UnifiedToken[];
     roomNumber: number;
     totalRooms: number;
     walletAddress: string;
     domain?: string | null;
     displayName?: string;
-    onNFTSelect?: (nft: NFTToken) => void;
+    onNFTSelect?: (nft: UnifiedToken) => void;
     onNextRoom?: () => void;
     onPrevRoom?: () => void;
     preloadedTextures?: Map<string, any>;
     cameraMode: CameraMode;
 }
 
-interface NFTWithDimensions extends NFTToken {
+interface NFTWithDimensions extends UnifiedToken {
     aspectRatio: number;
     width?: number;
     height?: number;
@@ -49,26 +49,15 @@ export default function GalleryRoom({
     const [nftsWithDimensions, setNftsWithDimensions] = useState<NFTWithDimensions[]>([]);
     const [dimensionsLoading, setDimensionsLoading] = useState(true);
 
-    // Helper function to get image URI (same as in page.tsx)
-    const getImageUri = (nft: NFTToken) => {
-        const metadata = nft.metadata;
-        if (!metadata) return null;
-
-        const possibleUris = [
-            metadata.display_uri,
-            metadata.image,
-            metadata.artifact_uri,
-            metadata.thumbnail_uri,
-            metadata.formats?.[0]?.uri,
-            (metadata as any).displayUri,
-            (metadata as any).artifactUri,
-            (metadata as any).thumbnailUri,
-            (metadata as any).imageUri,
-            (metadata as any).media?.[0]?.uri,
-            (metadata as any).assets?.[0]?.uri,
-        ];
-
-        return possibleUris.find((uri) => uri && typeof uri === "string") || null;
+    // Helper function to get image URI
+    const getImageUri = (nft: UnifiedToken) => {
+        return (
+            nft.displayImage ||
+            nft.metadata?.displayUri ||
+            nft.metadata?.artifactUri ||
+            nft.metadata?.image ||
+            nft.metadata?.thumbnailUri
+        );
     };
 
     // Load image dimensions for all NFTs
@@ -196,7 +185,7 @@ export default function GalleryRoom({
     }, [nftsWithDimensions]);
 
     const handleNFTClick = useCallback(
-        (nft: NFTToken) => {
+        (nft: UnifiedToken) => {
             onNFTSelect?.(nft);
         },
         [onNFTSelect]

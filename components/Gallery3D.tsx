@@ -1,17 +1,17 @@
 import { Suspense, useState, useEffect, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment, Html } from "@react-three/drei";
-import { NFTToken } from "../lib/nft";
+import { UnifiedToken } from "../lib/data/types/token-types";
 import GalleryRoom from "./gallery/GalleryRoom";
 import CameraModeSelector, { CameraMode } from "./gallery/ui/CameraModeSelector";
 import RoomNavigation from "./gallery/ui/RoomNavigation";
 
 interface Gallery3DProps {
-    nfts: NFTToken[];
+    nfts: UnifiedToken[];
     address: string;
     domain?: string | null;
     displayName?: string;
-    onNFTSelect: (nft: NFTToken) => void;
+    onNFTSelect: (nft: UnifiedToken) => void;
     preloadedTextures?: Map<string, any>; // THREE.Texture but avoiding import issues
     currentRoom?: number;
     onRoomChange?: (roomNumber: number) => void;

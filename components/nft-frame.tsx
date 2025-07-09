@@ -6,34 +6,10 @@ import { Text, Html, Box } from "@react-three/drei";
 import * as THREE from "three";
 import MediaContent from "./MediaContent";
 import { sanitizeNFTName, getDynamicFontSize, splitTextForDisplay } from "../lib/text-utils";
-
-interface NFTToken {
-    id: string;
-    token_id: string;
-    balance?: number;
-    contract: {
-        address: string;
-        alias?: string;
-    };
-    metadata?: {
-        name?: string;
-        description?: string;
-        image?: string;
-        artifact_uri?: string;
-        artifactUri?: string;
-        display_uri?: string;
-        displayUri?: string;
-        thumbnail_uri?: string;
-        thumbnailUri?: string;
-        formats?: Array<{
-            uri: string;
-            mimeType: string;
-        }>;
-    };
-}
+import { UnifiedToken } from "../lib/data/types/token-types";
 
 interface NFTFrameProps {
-    nft: NFTToken;
+    nft: UnifiedToken;
     position: [number, number, number];
     rotation?: [number, number, number];
     onClick?: () => void;
@@ -78,22 +54,15 @@ export default function NFTFrame({
 
         // All possible URIs with their sources
         const possibleUris = [
-            { uri: metadata.display_uri, source: "display_uri" },
+            { uri: nft.displayImage, source: "displayImage" },
             { uri: metadata.displayUri, source: "displayUri" },
             { uri: metadata.image, source: "image" },
-            { uri: metadata.thumbnail_uri, source: "thumbnail_uri" },
             { uri: metadata.thumbnailUri, source: "thumbnailUri" },
-            { uri: metadata.artifact_uri, source: "artifact_uri" },
             { uri: metadata.artifactUri, source: "artifactUri" },
-            { uri: metadata.formats?.[0]?.uri, source: "formats[0].uri" },
-            // Additional fallbacks for different standards
-            { uri: (metadata as any).imageUri, source: "imageUri" },
-            { uri: (metadata as any).media?.[0]?.uri, source: "media[0].uri" },
-            { uri: (metadata as any).assets?.[0]?.uri, source: "assets[0].uri" },
         ].filter((item) => item.uri && typeof item.uri === "string");
 
         // First, try to find URIs that are likely images
-        const imageUris = possibleUris.filter((item) => isImageUri(item.uri));
+        const imageUris = possibleUris.filter((item) => item.uri && isImageUri(item.uri));
 
         if (imageUris.length > 0) {
             return imageUris[0].uri;
@@ -107,8 +76,8 @@ export default function NFTFrame({
     };
 
     const getMimeType = () => {
-        const metadata = nft.metadata;
-        return metadata?.formats?.[0]?.mimeType;
+        // Since UnifiedMetadata doesn't have formats, we'll return undefined
+        return undefined;
     };
 
     const imageUri = getImageUri();
@@ -178,7 +147,7 @@ export default function NFTFrame({
 
             {/* Smart title rendering below the frame */}
             {(() => {
-                const sanitizedName = sanitizeNFTName(nft.metadata?.name, nft.token_id, 35);
+                const sanitizedName = sanitizeNFTName(nft.metadata?.name, nft.tokenId, 35);
                 const textLines = splitTextForDisplay(sanitizedName, 25);
                 const fontSize = getDynamicFontSize(sanitizedName, 0.2);
 

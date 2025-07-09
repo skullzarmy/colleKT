@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { tzktSdkClient } from "@/lib/data/sources/tzkt-sdk-client";
 
 export default function HomePage() {
     const [input, setInput] = useState("");
@@ -26,11 +27,8 @@ export default function HomePage() {
             }
 
             // Try to resolve as domain
-            const response = await fetch(`https://api.tzkt.io/v1/domains?name=${domain}&limit=1`);
-            if (!response.ok) return null;
-
-            const domains = await response.json();
-            if (domains.length > 0 && domains[0].address) {
+            const domains = await tzktSdkClient.getDomainsByName(domain, 1);
+            if (domains.length > 0 && domains[0].address?.address) {
                 return domains[0].address.address;
             }
 
