@@ -20,23 +20,7 @@ export default function GalleryPageWithNumber() {
         return pageNumber;
     })();
 
-    const handlePageChange = (page: number) => {
-        if (page === 1) {
-            // Going to page 1, use base route
-            router.push(`/gallery/${address}`);
-        } else {
-            // Going to specific page, use dynamic route
-            router.push(`/gallery/${address}/page/${page}`);
-        }
-    };
-
     return (
-        <UnifiedGallery
-            address={address}
-            currentPage={currentPage}
-            isBasePage={false}
-            enableDocumentTitle={false}
-            onPageChange={handlePageChange}
-        />
+        <UnifiedGallery address={address} currentPage={currentPage} isBasePage={false} enableDocumentTitle={false} />
     );
 }

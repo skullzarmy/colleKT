@@ -126,7 +126,6 @@ interface UnifiedGalleryProps {
     address: string;
     currentPage: number;
     isBasePage?: boolean;
-    onPageChange: (page: number) => void;
     enableDocumentTitle?: boolean;
 }
 
@@ -134,7 +133,6 @@ export default function UnifiedGallery({
     address,
     currentPage,
     isBasePage = false,
-    onPageChange,
     enableDocumentTitle = false,
 }: UnifiedGalleryProps) {
     const router = useRouter();
@@ -220,7 +218,13 @@ export default function UnifiedGallery({
     // Update URL when room changes - navigate to appropriate route
     const updateRoomInUrl = (roomNumber: number) => {
         const newPage = roomNumber + 1;
-        onPageChange(newPage);
+        if (newPage === 1) {
+            // Going to page 1, use base route
+            router.push(`/gallery/${address}`);
+        } else {
+            // Going to specific page, use dynamic route
+            router.push(`/gallery/${address}/page/${newPage}`);
+        }
     };
 
     // Preload more textures when room changes
@@ -266,7 +270,7 @@ export default function UnifiedGallery({
 
                 // If we're on an invalid page, redirect appropriately
                 if (currentPage > result.pagination.totalPages && result.pagination.totalItems > 0) {
-                    onPageChange(1); // Go back to page 1
+                    router.push(`/gallery/${address}`); // Go back to page 1
                     return;
                 }
 
@@ -451,7 +455,7 @@ export default function UnifiedGallery({
         if (isBasePage) {
             router.push("/");
         } else {
-            onPageChange(1);
+            router.push(`/gallery/${address}`);
         }
     };
 

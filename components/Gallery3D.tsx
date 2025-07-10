@@ -5,6 +5,7 @@ import { UnifiedToken } from "../lib/data/types/token-types";
 import GalleryRoom from "./gallery/GalleryRoom";
 import CameraModeSelector, { CameraMode } from "./gallery/ui/CameraModeSelector";
 import RoomNavigation from "./gallery/ui/RoomNavigation";
+import GalleryFooter from "./gallery/ui/GalleryFooter";
 
 interface Gallery3DProps {
     nfts: UnifiedToken[];
@@ -147,6 +148,9 @@ export default function Gallery3D({
                 onNextRoom={handleNextRoom}
                 onGoToRoom={onRoomChange}
             />
+
+            {/* Footer */}
+            <GalleryFooter />
         </div>
     );
 }
