@@ -3,17 +3,34 @@
 import { useState, useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { THREE_GetGifTexture } from "threejs-gif-texture";
 
 interface MediaContentProps {
     uri: string;
     mimeType?: string;
+    fallbackUris?: string[]; // Multiple URIs to try if primary fails
+    initialTexture?: THREE.Texture; // Show this texture first while loading
+    onTextureReady?: (texture: THREE.Texture) => void; // Callback when new texture is ready
 }
 
-export default function MediaContent({ uri, mimeType }: MediaContentProps) {
-    const [texture, setTexture] = useState<THREE.Texture | null>(null);
+export default function MediaContent({
+    uri,
+    mimeType,
+    fallbackUris = [],
+    initialTexture,
+    onTextureReady,
+}: MediaContentProps) {
+    const [texture, setTexture] = useState<THREE.Texture | null>(initialTexture || null);
     const [error, setError] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!initialTexture); // Not loading if we have initial texture
     const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+
+    // Log for videos and GIFs to track instances
+    if (mimeType?.startsWith("video/")) {
+        console.log("🎬 VIDEO COMPONENT:", uri.substring(0, 50) + "...");
+    } else if (mimeType?.includes("gif") || uri.toLowerCase().includes(".gif")) {
+        console.log("🎨 GIF COMPONENT:", uri.substring(0, 50) + "...");
+    }
 
     // Helper function to detect if URI contains HTML content
     const isHtmlContent = (uri: string, mimeType?: string): boolean => {
@@ -30,83 +47,52 @@ export default function MediaContent({ uri, mimeType }: MediaContentProps) {
             return;
         }
 
-        const loadMedia = async () => {
+        const createPlaceholderTexture = () => {
             try {
-                setLoading(true);
-                setError(false);
+                const canvas = document.createElement("canvas");
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext("2d")!;
 
-                // Convert IPFS URIs to gateway URLs, but leave data URIs unchanged
-                let mediaUrl = uri;
-                if (uri.startsWith("ipfs://")) {
-                    // Extract CID and preserve any query parameters
-                    const withoutProtocol = uri.replace("ipfs://", "");
-                    mediaUrl = `https://ipfs.fileship.xyz/${withoutProtocol}`;
-                } else if (uri.startsWith("data:")) {
-                    // Keep base64 data URIs as-is
-                    mediaUrl = uri;
-                }
+                // Create gradient background
+                const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+                gradient.addColorStop(0, "#2a2a2a");
+                gradient.addColorStop(1, "#1a1a1a");
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 512, 512);
 
-                // Determine media type
-                const isVideo = mimeType?.startsWith("video/") || mediaUrl.match(/\.(mp4|webm|ogg|mov)(\?|$)/i);
-                const isHtml = isHtmlContent(uri, mimeType);
+                // Add border
+                ctx.strokeStyle = "#555";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(1, 1, 510, 510);
 
-                if (isHtml) {
-                    // Load HTML content in iframe and render to canvas
-                    await loadHtmlAsTexture(mediaUrl);
-                } else if (isVideo) {
-                    // Load video texture
-                    const video = document.createElement("video");
-                    video.crossOrigin = "anonymous";
-                    video.loop = true;
-                    video.muted = true;
-                    video.playsInline = true;
-                    video.autoplay = true;
+                // Add orientation marker at top
+                ctx.fillStyle = "#00ff00";
+                ctx.font = "24px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("↑ TOP", 256, 100);
 
-                    video.onloadeddata = () => {
-                        const videoTexture = new THREE.VideoTexture(video);
-                        videoTexture.minFilter = THREE.LinearFilter;
-                        videoTexture.magFilter = THREE.LinearFilter;
-                        videoTexture.generateMipmaps = false;
-                        videoTexture.flipY = false;
-                        videoTexture.wrapS = THREE.ClampToEdgeWrapping;
-                        videoTexture.wrapT = THREE.ClampToEdgeWrapping;
+                // Add icon
+                ctx.fillStyle = "#00bcd4";
+                ctx.font = "64px Arial";
+                ctx.fillText("🖼", 256, 200);
 
-                        setTexture(videoTexture);
-                        setLoading(false);
-                        video.play().catch(console.error);
-                    };
+                // Add label
+                ctx.font = "24px Arial";
+                ctx.fillText("NFT", 256, 280);
 
-                    video.onerror = () => createPlaceholderTexture();
-                    video.src = mediaUrl;
-                } else {
-                    // Load image texture (includes GIFs)
-                    const loader = new THREE.TextureLoader();
-                    loader.setCrossOrigin("anonymous");
+                ctx.font = "16px Arial";
+                ctx.fillStyle = "#888";
+                ctx.fillText("Loading...", 256, 320);
 
-                    loader.load(
-                        mediaUrl,
-                        (loadedTexture) => {
-                            // Configure texture properties
-                            loadedTexture.minFilter = THREE.LinearFilter;
-                            loadedTexture.magFilter = THREE.LinearFilter;
-                            loadedTexture.generateMipmaps = false;
-                            loadedTexture.flipY = false;
-                            loadedTexture.wrapS = THREE.ClampToEdgeWrapping;
-                            loadedTexture.wrapT = THREE.ClampToEdgeWrapping;
-                            loadedTexture.needsUpdate = true;
-
-                            setTexture(loadedTexture);
-                            setLoading(false);
-                        },
-                        undefined, // Remove progress callback
-                        (error) => {
-                            // Texture loader error - silently continue
-                            createPlaceholderTexture();
-                        }
-                    );
-                }
+                const placeholderTexture = new THREE.CanvasTexture(canvas);
+                placeholderTexture.flipY = false;
+                placeholderTexture.needsUpdate = true;
+                setTexture(placeholderTexture);
+                setLoading(false);
             } catch (err) {
-                createPlaceholderTexture();
+                setError(true);
+                setLoading(false);
             }
         };
 
@@ -226,62 +212,261 @@ export default function MediaContent({ uri, mimeType }: MediaContentProps) {
 
                 setTexture(htmlTexture);
                 setLoading(false);
+
+                // Notify parent of new texture
+                if (onTextureReady) {
+                    onTextureReady(htmlTexture);
+                }
             } catch (htmlError) {
                 createPlaceholderTexture();
             }
         };
 
-        const createPlaceholderTexture = () => {
+        const loadAnimatedGif = async (gifUrl: string) => {
             try {
-                const canvas = document.createElement("canvas");
-                canvas.width = 512;
-                canvas.height = 512;
-                const ctx = canvas.getContext("2d")!;
+                console.log("🎨 LOADING GIF WITH LIBRARY:", gifUrl.substring(0, 50) + "...");
 
-                // Create gradient background
-                const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-                gradient.addColorStop(0, "#2a2a2a");
-                gradient.addColorStop(1, "#1a1a1a");
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, 512, 512);
+                const gifTexture = await THREE_GetGifTexture(gifUrl);
 
-                // Add border
-                ctx.strokeStyle = "#555";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(1, 1, 510, 510);
+                // Configure texture properties to match our other textures
+                gifTexture.minFilter = THREE.LinearFilter;
+                gifTexture.magFilter = THREE.LinearFilter;
+                gifTexture.generateMipmaps = false;
+                gifTexture.flipY = false;
+                gifTexture.wrapS = THREE.ClampToEdgeWrapping;
+                gifTexture.wrapT = THREE.ClampToEdgeWrapping;
 
-                // Add orientation marker at top
-                ctx.fillStyle = "#00ff00";
-                ctx.font = "24px Arial";
-                ctx.textAlign = "center";
-                ctx.fillText("↑ TOP", 256, 100);
+                // ALWAYS PLAY - NO PAUSING LOGIC
+                gifTexture.play = true;
 
-                // Add icon
-                ctx.fillStyle = "#00bcd4";
-                ctx.font = "64px Arial";
-                ctx.fillText("🖼", 256, 200);
-
-                // Add label
-                ctx.font = "24px Arial";
-                ctx.fillText("NFT", 256, 280);
-
-                ctx.font = "16px Arial";
-                ctx.fillStyle = "#888";
-                ctx.fillText("Loading...", 256, 320);
-
-                const placeholderTexture = new THREE.CanvasTexture(canvas);
-                placeholderTexture.flipY = false;
-                placeholderTexture.needsUpdate = true;
-                setTexture(placeholderTexture);
+                setTexture(gifTexture);
                 setLoading(false);
-            } catch (err) {
-                setError(true);
-                setLoading(false);
+
+                if (onTextureReady) {
+                    onTextureReady(gifTexture);
+                }
+
+                console.log("🎨🔥 GIF TEXTURE LOADED AND PLAYING:", {
+                    url: gifUrl.substring(0, 50) + "...",
+                    width: gifTexture.gif?.width,
+                    height: gifTexture.gif?.height,
+                    totalFrames: gifTexture.gif?.totalFrames,
+                    playing: gifTexture.play,
+                });
+            } catch (error) {
+                console.warn("❌ GIF LIBRARY ERROR:", error);
+                throw error;
             }
         };
 
+        const attemptLoadMedia = async (mediaUrl: string): Promise<boolean> => {
+            return new Promise((resolve) => {
+                // Convert IPFS URIs to gateway URLs, but leave data URIs unchanged
+                let finalUrl = mediaUrl;
+                if (mediaUrl.startsWith("ipfs://")) {
+                    const withoutProtocol = mediaUrl.replace("ipfs://", "");
+                    finalUrl = `https://ipfs.fileship.xyz/${withoutProtocol}`;
+                } else if (mediaUrl.startsWith("data:")) {
+                    finalUrl = mediaUrl;
+                }
+
+                // Determine media type
+                const isVideo = mimeType?.startsWith("video/") || finalUrl.match(/\.(mp4|webm|ogg|mov)(\?|$)/i);
+                const isGif = mimeType?.includes("gif") || finalUrl.match(/\.gif(\?|$)/i);
+                const isHtml = isHtmlContent(mediaUrl, mimeType);
+
+                console.log("🔍 MEDIA TYPE DETECTION:", {
+                    url: finalUrl.substring(0, 50) + "...",
+                    mimeType,
+                    isVideo,
+                    isGif,
+                    isHtml,
+                });
+
+                if (isHtml) {
+                    // Load HTML content in iframe and render to canvas
+                    loadHtmlAsTexture(finalUrl)
+                        .then(() => resolve(true))
+                        .catch(() => resolve(false));
+                } else if (isGif) {
+                    // Always load GIF using the library (animation controlled by shouldAnimate prop)
+                    loadAnimatedGif(finalUrl)
+                        .then(() => resolve(true))
+                        .catch(() => resolve(false));
+                } else if (isVideo) {
+                    // Load video texture for actual videos only
+                    console.log("🎬 LOADING VIDEO:", uri.substring(0, 50) + "...");
+
+                    const video = document.createElement("video");
+                    video.crossOrigin = "anonymous";
+                    video.loop = true;
+                    video.muted = true;
+                    video.playsInline = true;
+                    video.autoplay = true;
+
+                    video.onloadeddata = () => {
+                        console.log("🎬 CREATING TEXTURE:", uri.substring(0, 50) + "...");
+
+                        const videoTexture = new THREE.VideoTexture(video);
+                        videoTexture.minFilter = THREE.LinearFilter;
+                        videoTexture.magFilter = THREE.LinearFilter;
+                        videoTexture.generateMipmaps = false;
+                        videoTexture.flipY = false;
+                        videoTexture.wrapS = THREE.ClampToEdgeWrapping;
+                        videoTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+                        setTexture(videoTexture);
+                        setLoading(false);
+
+                        // Notify parent of new texture
+                        if (onTextureReady) {
+                            console.log("🔥 TEXTURE READY:", uri.substring(0, 50) + "...");
+                            onTextureReady(videoTexture);
+                        }
+
+                        console.log("🎬 STARTING PLAYBACK:", uri.substring(0, 50) + "...");
+                        const playPromise = video.play();
+
+                        if (playPromise !== undefined) {
+                            playPromise
+                                .then(() => {
+                                    console.log("✅ VIDEO PLAYING:", uri.substring(0, 50) + "...");
+                                    resolve(true);
+                                })
+                                .catch((error) => {
+                                    console.error("❌ PLAY ERROR:", error.message);
+                                    resolve(false);
+                                });
+                        } else {
+                            resolve(true);
+                        }
+                    };
+
+                    video.onerror = (event) => {
+                        console.warn("❌ VIDEO ERROR:", uri.substring(0, 50) + "...");
+                        resolve(false);
+                    };
+
+                    video.src = finalUrl;
+                } else {
+                    // Load image texture (static images only, GIFs now go through video path)
+                    const loader = new THREE.TextureLoader();
+                    loader.setCrossOrigin("anonymous");
+
+                    loader.load(
+                        finalUrl,
+                        (loadedTexture) => {
+                            // Configure texture properties
+                            loadedTexture.minFilter = THREE.LinearFilter;
+                            loadedTexture.magFilter = THREE.LinearFilter;
+                            loadedTexture.generateMipmaps = false;
+                            loadedTexture.flipY = false;
+                            loadedTexture.wrapS = THREE.ClampToEdgeWrapping;
+                            loadedTexture.wrapT = THREE.ClampToEdgeWrapping;
+                            loadedTexture.needsUpdate = true;
+
+                            setTexture(loadedTexture);
+                            setLoading(false);
+
+                            // Notify parent of new texture
+                            if (onTextureReady) {
+                                onTextureReady(loadedTexture);
+                            }
+                            resolve(true);
+                        },
+                        undefined, // Remove progress callback
+                        (error) => {
+                            // Texture loader error - silently continue
+                            resolve(false);
+                        }
+                    );
+                }
+            });
+        };
+
+        async function loadMedia() {
+            try {
+                setLoading(true);
+                setError(false);
+
+                // Build URI chain: primary + fallbacks + IPFS gateway variants
+                const uriChain = [uri, ...fallbackUris];
+                const allUris: string[] = [];
+
+                for (const testUri of uriChain) {
+                    allUris.push(testUri);
+
+                    // Add IPFS gateway variants for IPFS URIs
+                    if (testUri.startsWith("ipfs://")) {
+                        const cid = testUri.replace("ipfs://", "");
+                        allUris.push(
+                            `https://ipfs.fileship.xyz/${cid}`,
+                            `https://ipfs.io/ipfs/${cid}`,
+                            `https://cloudflare-ipfs.com/ipfs/${cid}`
+                        );
+                    }
+                }
+
+                console.log("🎬 LOADING:", allUris.length, "URIs for", mimeType || "unknown type");
+
+                // Try each URI in the chain
+                for (let i = 0; i < allUris.length; i++) {
+                    const mediaUrl = allUris[i];
+
+                    try {
+                        const success = await attemptLoadMedia(mediaUrl);
+                        if (success) {
+                            console.log("✅ SUCCESS:", mediaUrl.substring(0, 60) + "...");
+                            return;
+                        }
+                    } catch (loadError) {
+                        continue;
+                    }
+                }
+
+                // All URIs failed, create placeholder
+                console.error("❌ ALL FAILED, using placeholder");
+                createPlaceholderTexture();
+            } catch (err) {
+                console.error("❌ CRITICAL ERROR:", err);
+                createPlaceholderTexture();
+            }
+        }
+
+        // If we have an initial texture, show it immediately and set up async loading for videos and GIFs
+        if (initialTexture) {
+            setTexture(initialTexture);
+            setLoading(false);
+
+            // For videos and GIFs, start async loading to upgrade from static to animated
+            if (mimeType?.startsWith("video/")) {
+                console.log("🎬 ASYNC VIDEO LOADING:", uri.substring(0, 50) + "...");
+                // Start async video loading but don't block the UI
+                setTimeout(() => loadMedia(), 100);
+            } else if (mimeType?.includes("gif") || uri.toLowerCase().includes(".gif")) {
+                console.log("🎨 ASYNC GIF LOADING:", uri.substring(0, 50) + "...");
+                // Start async GIF loading to replace static texture with animated GIF
+                setTimeout(() => loadMedia(), 100);
+            }
+            return;
+        }
+
+        // No initial texture, load normally
         loadMedia();
-    }, [uri, mimeType]);
+    }, [uri, mimeType, initialTexture]);
+
+    // NO GIF CONTROL - LET THEM ALL PLAY!
+    // useEffect(() => {
+    //     if (texture && "play" in texture && "gif" in texture) {
+    //         // This is a GIF texture from the library
+    //         const wasPlaying = texture.play;
+    //         texture.play = shouldAnimate;
+
+    //         if (wasPlaying !== shouldAnimate) {
+    //             console.log(`🎨 GIF ${shouldAnimate ? "RESUMED" : "PAUSED"}:`, uri.substring(0, 50) + "...");
+    //         }
+    //     }
+    // }, [shouldAnimate, texture, uri]);
 
     // Update material when texture changes
     useFrame(() => {
@@ -289,6 +474,14 @@ export default function MediaContent({ uri, mimeType }: MediaContentProps) {
             if (materialRef.current.map !== texture) {
                 materialRef.current.map = texture;
                 materialRef.current.needsUpdate = true;
+            }
+
+            // For video textures, ensure they update
+            if (texture instanceof THREE.VideoTexture) {
+                const video = texture.image as HTMLVideoElement;
+                if (video && !video.paused && !video.ended) {
+                    texture.needsUpdate = true;
+                }
             }
         }
     });
@@ -303,20 +496,25 @@ export default function MediaContent({ uri, mimeType }: MediaContentProps) {
     }, [texture]);
 
     if (loading) {
-        // Create a visible loading texture to test geometry
+        // Create a subtle loading texture that blends seamlessly
         const canvas = document.createElement("canvas");
         canvas.width = 256;
         canvas.height = 256;
         const ctx = canvas.getContext("2d")!;
-        ctx.fillStyle = "#ff0000"; // Bright red for testing
+
+        // Subtle gray gradient instead of jarring red
+        const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+        gradient.addColorStop(0, "#2a2a2a");
+        gradient.addColorStop(1, "#1a1a1a");
+        ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, 256, 256);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "32px Arial";
+
+        // Remove "LOADING" text for seamless experience
+        // Add subtle orientation marker only
+        ctx.fillStyle = "#333";
+        ctx.font = "16px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("LOADING", 128, 128);
-        // Add orientation marker
-        ctx.fillStyle = "#00ff00";
-        ctx.fillText("↑ TOP", 128, 60);
+        ctx.fillText("↑", 128, 50);
 
         const testTexture = new THREE.CanvasTexture(canvas);
         testTexture.flipY = false;

@@ -36,6 +36,18 @@ export interface UnifiedMetadata {
     displayUri?: string;
     thumbnailUri?: string;
 
+    // Media format information (CRITICAL for proper media detection)
+    formats?: Array<{
+        uri: string;
+        mimeType: string;
+        fileSize?: string | number;
+        hash?: string;
+        dimensions?: {
+            width?: number;
+            height?: number;
+        };
+    }>;
+
     // Additional metadata
     creators?: string[];
     tags?: string[];

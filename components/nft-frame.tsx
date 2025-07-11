@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Text, Html, Box } from "@react-three/drei";
+import { Text, Html } from "@react-three/drei";
 import * as THREE from "three";
 import MediaContent from "./MediaContent";
 import { sanitizeNFTName, getDynamicFontSize, splitTextForDisplay } from "../lib/text-utils";
 import { UnifiedToken } from "../lib/data/types/token-types";
+import { detectMediaType } from "../lib/media-utils";
 
 interface NFTFrameProps {
     nft: UnifiedToken;
@@ -30,6 +31,7 @@ export default function NFTFrame({
     const meshRef = useRef<THREE.Mesh>(null);
     const frameRef = useRef<THREE.Group>(null);
     const [hovered, setHovered] = useState(false);
+    const [currentTexture, setCurrentTexture] = useState<THREE.Texture | null>(preloadedTexture || null);
 
     // Helper function to detect if URI is likely an image
     const isImageUri = (uri: string): boolean => {
@@ -47,12 +49,46 @@ export default function NFTFrame({
         return hasImageExtension && !isHtml;
     };
 
-    // Get the best available image URI with media type detection
-    const getImageUri = () => {
+    // 🔥 UNIFIED MEDIA DETECTION - No circular dependencies
+    const detectUnifiedMedia = () => {
         const metadata = nft.metadata;
-        if (!metadata) return null;
+        if (!metadata) return { uri: null, mimeType: undefined };
 
-        // All possible URIs with their sources
+        // Run media detection once
+        const mediaTypeResult = detectMediaType(metadata);
+
+        // console.log("🎭 UNIFIED MEDIA DETECTION:", {
+        //     result: mediaTypeResult,
+        //     nftId: nft.id,
+        //     hasFormats: !!metadata.formats,
+        //     formatsCount: metadata.formats?.length || 0,
+        //     rawFormats: metadata.formats,
+        //     allAvailableUris: {
+        //         displayImage: nft.displayImage,
+        //         displayUri: metadata.displayUri,
+        //         image: metadata.image,
+        //         thumbnailUri: metadata.thumbnailUri,
+        //         artifactUri: metadata.artifactUri,
+        //     },
+        // });
+
+        // If media detection found a specific URI (from formats), use that
+        if (mediaTypeResult.uri && mediaTypeResult.confidence > 0.8) {
+            // console.log("🎭 URI SELECTION: Using URI from media detection:", {
+            //     uri: mediaTypeResult.uri,
+            //     mimeType: mediaTypeResult.mimeType,
+            //     source: mediaTypeResult.source,
+            //     confidence: mediaTypeResult.confidence,
+            // });
+            // console.log("🔥 FINAL URI BEING USED:", mediaTypeResult.uri);
+            // console.log("🔥 FINAL MIME TYPE BEING USED:", mediaTypeResult.mimeType);
+            return {
+                uri: mediaTypeResult.uri,
+                mimeType: mediaTypeResult.mimeType,
+            };
+        }
+
+        // Fallback to legacy URI priority for low-confidence detections
         const possibleUris = [
             { uri: nft.displayImage, source: "displayImage" },
             { uri: metadata.displayUri, source: "displayUri" },
@@ -64,24 +100,37 @@ export default function NFTFrame({
         // First, try to find URIs that are likely images
         const imageUris = possibleUris.filter((item) => item.uri && isImageUri(item.uri));
 
+        let selectedUri: string | null = null;
         if (imageUris.length > 0) {
-            return imageUris[0].uri;
+            selectedUri = imageUris[0].uri || null;
+        } else {
+            selectedUri = possibleUris[0]?.uri || null;
         }
 
-        // If no obvious image URIs, fall back to first available URI
-        const foundUri = possibleUris[0]?.uri;
+        // Re-detect media type for fallback URI
+        let finalMimeType = undefined;
+        if (selectedUri) {
+            const fallbackResult = detectMediaType(metadata, selectedUri);
+            finalMimeType = fallbackResult.mimeType;
+        }
 
-        // Log for debugging when no image URI found
-        return foundUri;
+        return {
+            uri: selectedUri,
+            mimeType: finalMimeType,
+        };
     };
 
-    const getMimeType = () => {
-        // Since UnifiedMetadata doesn't have formats, we'll return undefined
-        return undefined;
-    };
-
-    const imageUri = getImageUri();
+    const mediaInfo = detectUnifiedMedia();
+    const imageUri = mediaInfo.uri;
+    const mimeType = mediaInfo.mimeType;
     const effectiveTexture = preloadedTexture;
+
+    // Update currentTexture when preloadedTexture changes
+    useEffect(() => {
+        if (preloadedTexture) {
+            setCurrentTexture(preloadedTexture);
+        }
+    }, [preloadedTexture]);
 
     // Calculate frame dimensions based on aspect ratio
     // Standard height of 2.5 units, width adjusted by aspect ratio
@@ -93,7 +142,7 @@ export default function NFTFrame({
     const frameBorderWidth = frameWidth + borderSize;
     const frameBorderHeight = frameHeight + borderSize;
 
-    // Improved animation
+    // Simple animation - no proximity bullshit!
     useFrame((state) => {
         if (frameRef.current) {
             // Subtle floating animation only when hovered or selected
@@ -131,15 +180,13 @@ export default function NFTFrame({
             {/* Artwork with proper aspect ratio */}
             <mesh position={[0, 0, 0.08]} castShadow rotation={[Math.PI, 0, 0]}>
                 <planeGeometry args={[frameWidth, frameHeight]} />
-                {preloadedTexture ? (
-                    <meshBasicMaterial
-                        map={preloadedTexture}
-                        side={THREE.DoubleSide}
-                        transparent={false}
-                        alphaTest={0.1}
+                {imageUri ? (
+                    <MediaContent
+                        uri={imageUri}
+                        mimeType={mimeType}
+                        initialTexture={preloadedTexture}
+                        onTextureReady={setCurrentTexture}
                     />
-                ) : imageUri ? (
-                    <MediaContent uri={imageUri} mimeType={getMimeType()} />
                 ) : (
                     <meshBasicMaterial color="#ff0000" side={THREE.DoubleSide} />
                 )}

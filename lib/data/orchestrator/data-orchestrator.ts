@@ -344,6 +344,10 @@ export class DataOrchestrator {
             supply: token?.totalSupply || token?.metadata?.supply || undefined,
             creators: token?.metadata?.creators || undefined,
             attributes: token?.metadata?.attributes || undefined,
+            // 🔥 CRITICAL FIX: Preserve formats data with MIME types
+            formats: token?.metadata?.formats || undefined,
+            // Store raw metadata for fallback detection
+            raw: token?.metadata || undefined,
         };
 
         // Determine token standard
@@ -415,6 +419,10 @@ export class DataOrchestrator {
             supply: token?.totalSupply || token?.metadata?.supply || undefined,
             creators: token?.metadata?.creators || undefined,
             attributes: token?.metadata?.attributes || undefined,
+            // 🔥 CRITICAL FIX: Preserve formats data with MIME types
+            formats: token?.metadata?.formats || undefined,
+            // Store raw metadata for fallback detection
+            raw: token?.metadata || undefined,
         };
 
         // 🔍 DEBUG: Log creators to understand the alias issue
