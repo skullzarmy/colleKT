@@ -3,9 +3,12 @@ import { Canvas } from "@react-three/fiber";
 import { Environment, Html } from "@react-three/drei";
 import { UnifiedToken } from "../lib/data/types/token-types";
 import GalleryRoom from "./gallery/GalleryRoom";
-import CameraModeSelector, { CameraMode } from "./gallery/ui/CameraModeSelector";
+import GalleryControls from "./gallery/ui/GalleryControls";
 import RoomNavigation from "./gallery/ui/RoomNavigation";
 import GalleryFooter from "./gallery/ui/GalleryFooter";
+import { useViewState } from "@/contexts/ViewStateContext";
+
+export type CameraMode = "walk" | "overview";
 
 interface Gallery3DProps {
     nfts: UnifiedToken[];
@@ -19,9 +22,6 @@ interface Gallery3DProps {
     totalNFTs?: number; // Total NFTs in the collection for calculating total rooms
     // Layout coordination props to avoid UI overlaps
     topOffset?: number; // Offset from top to avoid overlapping with page headers
-    // View state persistence
-    initialCameraMode?: CameraMode;
-    onCameraModeChange?: (mode: CameraMode) => void;
 }
 
 const NFTS_PER_ROOM = 20;
@@ -37,30 +37,14 @@ export default function Gallery3D({
     onRoomChange,
     totalNFTs = 0,
     topOffset = 0, // Default to no offset
-    initialCameraMode = "walk",
-    onCameraModeChange,
 }: Gallery3DProps) {
     const [currentRoom, setCurrentRoom] = useState(initialRoom);
-    const [cameraMode, setCameraMode] = useState<CameraMode>(initialCameraMode);
+    const { cameraMode, setCameraMode } = useViewState();
 
     // Update local room state when prop changes
     useEffect(() => {
         setCurrentRoom(initialRoom);
     }, [initialRoom]);
-
-    // Update camera mode when prop changes
-    useEffect(() => {
-        setCameraMode(initialCameraMode);
-    }, [initialCameraMode, cameraMode]);
-
-    // Handle camera mode changes and notify parent
-    const handleCameraModeChange = useCallback(
-        (mode: CameraMode) => {
-            setCameraMode(mode);
-            onCameraModeChange?.(mode);
-        },
-        [onCameraModeChange]
-    );
 
     // Calculate total rooms based on total NFTs in collection
     const totalRooms = Math.max(1, Math.ceil(totalNFTs / NFTS_PER_ROOM));
@@ -130,12 +114,8 @@ export default function Gallery3D({
                 </Suspense>
             </Canvas>
 
-            {/* Movement Controls Drawer */}
-            <CameraModeSelector
-                cameraMode={cameraMode}
-                onCameraModeChange={handleCameraModeChange}
-                topOffset={topOffset}
-            />
+            {/* Gallery Controls - Bottom Left */}
+            <GalleryControls />
 
             {/* Room Navigation UI */}
             <RoomNavigation

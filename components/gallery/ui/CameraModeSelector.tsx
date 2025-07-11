@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { User, Map, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export type CameraMode = "walk" | "overview";
 
@@ -19,12 +21,14 @@ export default function CameraModeSelector({ cameraMode, onCameraModeChange, top
         <>
             {/* Movement Controls Button */}
             <div className="absolute flex gap-2 left-4" style={{ top: buttonTop }}>
-                <button
+                <Button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="flex items-center justify-center w-12 h-12 text-lg text-white rounded-lg bg-black/50 backdrop-blur-sm border border-white/20 hover:bg-black/70 transition-colors"
+                    variant="secondary"
+                    size="sm"
+                    className="bg-black/60 hover:bg-black/80 text-white border-white/20 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-1.5"
                 >
-                    🚶
-                </button>
+                    <User className="w-3 h-3" />
+                </Button>
             </div>
 
             {/* Controls Drawer */}
@@ -35,11 +39,8 @@ export default function CameraModeSelector({ cameraMode, onCameraModeChange, top
                 >
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-semibold text-white">Movement Controls</h3>
-                        <button
-                            onClick={() => setIsOpen(false)}
-                            className="text-white/60 hover:text-white text-lg leading-none"
-                        >
-                            ×
+                        <button onClick={() => setIsOpen(false)} className="text-white/60 hover:text-white">
+                            <X className="w-4 h-4" />
                         </button>
                     </div>
 
@@ -49,23 +50,25 @@ export default function CameraModeSelector({ cameraMode, onCameraModeChange, top
                         <div className="flex flex-col gap-1">
                             <button
                                 onClick={() => onCameraModeChange("walk")}
-                                className={`px-3 py-1 text-xs rounded ${
+                                className={`px-3 py-1 text-xs rounded flex items-center gap-2 ${
                                     cameraMode === "walk"
                                         ? "bg-cyan-500 text-white"
                                         : "bg-gray-600 text-gray-300 hover:bg-gray-500"
                                 }`}
                             >
-                                🚶 Walk Mode
+                                <User className="w-3 h-3" />
+                                Walk Mode
                             </button>
                             <button
                                 onClick={() => onCameraModeChange("overview")}
-                                className={`px-3 py-1 text-xs rounded ${
+                                className={`px-3 py-1 text-xs rounded flex items-center gap-2 ${
                                     cameraMode === "overview"
                                         ? "bg-cyan-500 text-white"
                                         : "bg-gray-600 text-gray-300 hover:bg-gray-500"
                                 }`}
                             >
-                                🗺️ Overview
+                                <Map className="w-3 h-3" />
+                                Overview
                             </button>
                         </div>
                     </div>

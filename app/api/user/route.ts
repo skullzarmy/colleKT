@@ -1,18 +1,19 @@
 /**
- * Server-side API route for COLLECTION gallery token collection data
+ * Server-side API route for USER gallery token collection data
  *
- * Handles cache-first token collection fetching for contract-based collections
- * via direct TzKT queries with contract filtering.
+ * Handles cache-first token collection fetching with Redis caching,
+ * filtering, and pagination for USER galleries (wallet-based).
+ * All Redis operations are server-side only.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { dataOrchestrator } from "@/lib/data/orchestrator/data-orchestrator";
 
 /**
- * GET /api/collection
+ * GET /api/user
  *
  * Query params:
- * - contractAddress: Tezos contract address (KT1...)
+ * - address: Tezos address (wallet address)
  * - page: Page number (default: 1)
  * - pageSize: Items per page (default: 20)
  * - forceRefresh: Skip cache (default: false)
@@ -20,23 +21,23 @@ import { dataOrchestrator } from "@/lib/data/orchestrator/data-orchestrator";
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-        const contractAddress = searchParams.get("contractAddress");
+        const address = searchParams.get("address");
         const page = parseInt(searchParams.get("page") || "1");
         const pageSize = parseInt(searchParams.get("pageSize") || "20");
         const forceRefresh = searchParams.get("forceRefresh") === "true";
 
-        if (!contractAddress) {
-            return NextResponse.json({ error: "ContractAddress parameter is required" }, { status: 400 });
+        if (!address) {
+            return NextResponse.json({ error: "Address parameter is required" }, { status: 400 });
         }
 
-        // Use data orchestrator for cache-first COLLECTION gallery fetching
-        // This will be implemented in Step 2
-        const result = await dataOrchestrator.getCollectionTokenCollection({
-            contractAddress,
+        // Use data orchestrator for cache-first USER gallery fetching
+        const result = await dataOrchestrator.getTokenCollection({
+            address,
             pagination: { page, pageSize },
             forceRefresh,
             applyFilters: true,
             cacheResults: true,
+            sortChronologically: true,
         });
 
         return NextResponse.json({
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
             },
         });
     } catch (error) {
-        console.error("Collection gallery API error:", error);
+        console.error("User gallery API error:", error);
         return NextResponse.json(
             {
                 success: false,

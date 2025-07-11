@@ -15,19 +15,56 @@ export interface MediaTypeResult {
 }
 
 /**
+ * Get priority score for different MIME types
+ * Higher score = higher priority for display
+ */
+function getFormatPriorityScore(mimeType?: string): number {
+    if (!mimeType) return 0;
+
+    const type = mimeType.toLowerCase();
+
+    // Prioritize animated content
+    if (type.includes("gif")) return 100; // GIFs have highest priority
+    if (type.startsWith("video/")) return 90; // Videos second
+    if (type.includes("html")) return 80; // Interactive HTML third
+    if (type.startsWith("audio/")) return 70; // Audio content
+    if (type.startsWith("image/")) return 50; // Static images lower priority
+
+    return 10; // Unknown types get low priority
+}
+
+/**
  * Extract MIME type from UnifiedMetadata with smart fallbacks
  */
 export function detectMediaType(metadata: UnifiedMetadata, uri?: string): MediaTypeResult {
-    // Strategy 1: Use formats array if available (HIGHEST CONFIDENCE)
+    // Strategy 1: Use formats array if available - PRIORITIZE ANIMATED CONTENT
     if (metadata.formats && metadata.formats.length > 0) {
-        const format = metadata.formats[0];
-        if (format.mimeType) {
+        // Priority order: GIF > Video > Other formats
+        const prioritizedFormats = [...metadata.formats].sort((a, b) => {
+            const aScore = getFormatPriorityScore(a.mimeType);
+            const bScore = getFormatPriorityScore(b.mimeType);
+            return bScore - aScore; // Higher score first
+        });
+
+        const bestFormat = prioritizedFormats[0];
+        if (bestFormat.mimeType) {
+            console.log("🎯 MEDIA DETECTION - Format priority selection:", {
+                totalFormats: metadata.formats.length,
+                selectedFormat: bestFormat,
+                allFormats: metadata.formats,
+                priorityScores: metadata.formats.map((f) => ({
+                    mimeType: f.mimeType,
+                    score: getFormatPriorityScore(f.mimeType),
+                    uri: f.uri,
+                })),
+            });
+
             return {
-                mimeType: format.mimeType,
-                mediaCategory: categorizeMediaType(format.mimeType),
+                mimeType: bestFormat.mimeType,
+                mediaCategory: categorizeMediaType(bestFormat.mimeType),
                 confidence: 0.95,
                 source: "formats",
-                uri: format.uri, // 🔥 CRITICAL: Return the URI that matches this MIME type
+                uri: bestFormat.uri, // 🔥 CRITICAL: Return the URI for the BEST format, not just first
             };
         }
     }

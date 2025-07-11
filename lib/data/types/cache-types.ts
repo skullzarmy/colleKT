@@ -10,10 +10,17 @@ import type { DataSource, UnifiedToken, UnifiedCollection, FilterResult } from "
  * Cache key patterns for different data types
  */
 export interface CacheKeyPatterns {
-    // Token collections by address
-    tokenCollection: `tokens:${string}`; // tokens:tz1ABC...
+    // Gallery-specific token collections (NEW)
+    userCollection: `tokens:user:${string}:${string}`; // tokens:user:tz1ABC...:filter-hash
+    curationCollection: `tokens:curation:${string}:${string}`; // tokens:curation:146288:filter-hash
+    contractCollection: `tokens:collection:${string}:${string}`; // tokens:collection:KT1ABC...:filter-hash
 
-    // Filtered collections
+    // Gallery metadata (NEW)
+    curationMetadata: `meta:curation:${string}`; // meta:curation:146288
+    collectionMetadata: `meta:collection:${string}`; // meta:collection:KT1ABC...
+
+    // Legacy patterns (for backward compatibility)
+    tokenCollection: `tokens:${string}`; // tokens:tz1ABC...
     filteredCollection: `filtered:${string}:${string}`; // filtered:tz1ABC...:filter-hash
 
     // Domain lookups
@@ -36,6 +43,29 @@ export interface CacheKeyPatterns {
 /**
  * Cache key builder utilities
  */
+
+// NEW: Gallery-specific cache key builders
+export function userCollection(address: string, filterHash: string): string {
+    return `tokens:user:${address}:${filterHash}`;
+}
+
+export function curationCollection(curationId: string, filterHash: string): string {
+    return `tokens:curation:${curationId}:${filterHash}`;
+}
+
+export function contractCollection(contractAddress: string, filterHash: string): string {
+    return `tokens:collection:${contractAddress}:${filterHash}`;
+}
+
+export function curationMetadata(curationId: string): string {
+    return `meta:curation:${curationId}`;
+}
+
+export function collectionMetadata(contractAddress: string): string {
+    return `meta:collection:${contractAddress}`;
+}
+
+// LEGACY: Existing cache key builders (for backward compatibility)
 export function tokenCollection(address: string): string {
     return `tokens:${address}`;
 }
@@ -150,6 +180,13 @@ export interface CacheConfig {
 
     // Default TTL values (in seconds)
     ttl: {
+        // Gallery-specific TTL strategies (NEW)
+        userGallery: number; // 3600 (1 hour) - user collections change frequently
+        curationGallery: number; // 7200 (2 hours) - curations rarely change
+        collectionGallery: number; // 1800 (30 min) - contracts mint frequently
+        galleryMetadata: number; // 86400 (24 hours) - metadata changes rarely
+
+        // Legacy TTL values (for backward compatibility)
         tokens: number; // 1 hour default
         domains: number; // 24 hours default
         collections: number; // 6 hours default

@@ -11,13 +11,9 @@ export default function OverviewController({ hallwayLength = 30 }: OverviewContr
     const { camera } = useThree();
 
     useEffect(() => {
-        // Calculate camera position based on hallway length
-        const cameraHeight = Math.max(12, hallwayLength * 0.4); // Scale height with length
-        const cameraZ = Math.max(8, hallwayLength * 0.3); // Position back from center
-
-        // Reset to overview position - angled overhead looking down at the hallway
-        camera.position.set(0, cameraHeight, cameraZ);
-        camera.lookAt(0, 4, 0); // Look at the middle of the hallway at wall height
+        // Fixed overview position - user-tested coordinates
+        camera.position.set(0, 15.6, -2.6);
+        camera.lookAt(0, 4, hallwayLength / 2); // Look towards the exit door at far end
         camera.updateProjectionMatrix();
     }, [camera, hallwayLength]);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, Component } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
@@ -136,6 +136,7 @@ export default function UnifiedGallery({
     enableDocumentTitle = false,
 }: UnifiedGalleryProps) {
     const router = useRouter();
+    const pathname = usePathname();
     const { domain, isLoading: domainLoading, displayName } = useTezosDomain(address);
     const [nfts, setNfts] = useState<UnifiedToken[]>([]);
     const [loading, setLoading] = useState(true);
@@ -149,6 +150,19 @@ export default function UnifiedGallery({
 
     // Use shared view state instead of local state
     const { cameraMode, setCameraMode } = useViewState();
+
+    // Detect gallery type from current pathname
+    const getGalleryType = (): "USER" | "CURATION" | "COLLECTION" => {
+        if (pathname.startsWith("/curation/")) {
+            return "CURATION";
+        } else if (pathname.startsWith("/collection/")) {
+            return "COLLECTION";
+        } else {
+            return "USER";
+        }
+    };
+
+    const galleryType = getGalleryType();
 
     // Convert page number to room number (0-based)
     const currentRoom = currentPage - 1;
@@ -183,12 +197,34 @@ export default function UnifiedGallery({
 
             const NFTS_PER_ROOM = 20;
 
-            const response = await collektClient.getTokenCollection({
-                address,
-                page: currentPage,
-                pageSize: NFTS_PER_ROOM,
-                forceRefresh: true, // This will force a fresh fetch and rebuild cache
-            });
+            // Call appropriate client method based on gallery type
+            let response;
+            switch (galleryType) {
+                case "CURATION":
+                    response = await collektClient.getCurationCollection({
+                        curationId: address,
+                        page: currentPage,
+                        pageSize: NFTS_PER_ROOM,
+                        forceRefresh: true,
+                    });
+                    break;
+                case "COLLECTION":
+                    response = await collektClient.getContractCollection({
+                        contractAddress: address,
+                        page: currentPage,
+                        pageSize: NFTS_PER_ROOM,
+                        forceRefresh: true,
+                    });
+                    break;
+                default: // USER
+                    response = await collektClient.getTokenCollection({
+                        address,
+                        page: currentPage,
+                        pageSize: NFTS_PER_ROOM,
+                        forceRefresh: true, // This will force a fresh fetch and rebuild cache
+                    });
+                    break;
+            }
 
             if (response.success && response.data) {
                 const { tokens, pagination } = response.data;
@@ -218,12 +254,27 @@ export default function UnifiedGallery({
     // Update URL when room changes - navigate to appropriate route
     const updateRoomInUrl = (roomNumber: number) => {
         const newPage = roomNumber + 1;
+
+        // Generate route based on gallery type
+        let baseRoute: string;
+        switch (galleryType) {
+            case "CURATION":
+                baseRoute = `/curation/${address}`;
+                break;
+            case "COLLECTION":
+                baseRoute = `/collection/${address}`;
+                break;
+            default: // USER
+                baseRoute = `/gallery/${address}`;
+                break;
+        }
+
         if (newPage === 1) {
             // Going to page 1, use base route
-            router.push(`/gallery/${address}`);
+            router.push(baseRoute);
         } else {
             // Going to specific page, use dynamic route
-            router.push(`/gallery/${address}/page/${newPage}`);
+            router.push(`${baseRoute}/page/${newPage}`);
         }
     };
 
@@ -251,13 +302,34 @@ export default function UnifiedGallery({
                     isBasePage ? `Fetching room ${currentPage}...` : `Fetching collection page ${currentPage}...`
                 );
 
-                // Use collektClient
-                const response = await collektClient.getTokenCollection({
-                    address,
-                    page: currentPage,
-                    pageSize: NFTS_PER_ROOM,
-                    forceRefresh: false,
-                });
+                // Call appropriate client method based on gallery type
+                let response;
+                switch (galleryType) {
+                    case "CURATION":
+                        response = await collektClient.getCurationCollection({
+                            curationId: address,
+                            page: currentPage,
+                            pageSize: NFTS_PER_ROOM,
+                            forceRefresh: false,
+                        });
+                        break;
+                    case "COLLECTION":
+                        response = await collektClient.getContractCollection({
+                            contractAddress: address,
+                            page: currentPage,
+                            pageSize: NFTS_PER_ROOM,
+                            forceRefresh: false,
+                        });
+                        break;
+                    default: // USER
+                        response = await collektClient.getTokenCollection({
+                            address,
+                            page: currentPage,
+                            pageSize: NFTS_PER_ROOM,
+                            forceRefresh: false,
+                        });
+                        break;
+                }
 
                 if (!response.success || !response.data) {
                     throw new Error(response.error || "Failed to fetch collection");
@@ -296,7 +368,7 @@ export default function UnifiedGallery({
         };
 
         fetchNFTsForPage();
-    }, [address, currentPage, isBasePage]);
+    }, [address, currentPage, isBasePage, galleryType]);
 
     const preloadTextures = async (nftList: UnifiedToken[], targetRoom: number = 0, totalNFTCount?: number) => {
         setLoadingProgress("Preloading images...");
@@ -455,7 +527,18 @@ export default function UnifiedGallery({
         if (isBasePage) {
             router.push("/");
         } else {
-            router.push(`/gallery/${address}`);
+            // Go back to page 1 of the current gallery type
+            switch (galleryType) {
+                case "CURATION":
+                    router.push(`/curation/${address}`);
+                    break;
+                case "COLLECTION":
+                    router.push(`/collection/${address}`);
+                    break;
+                default: // USER
+                    router.push(`/gallery/${address}`);
+                    break;
+            }
         }
     };
 
@@ -576,8 +659,6 @@ export default function UnifiedGallery({
                         onRoomChange={updateRoomInUrl}
                         totalNFTs={totalNFTs}
                         topOffset={64} // 64px to avoid overlapping with Back button
-                        initialCameraMode={cameraMode}
-                        onCameraModeChange={setCameraMode}
                     />
                 </ErrorBoundary>
             ) : (

@@ -40,6 +40,20 @@ export interface CollektCollectionOptions {
     forceRefresh?: boolean;
 }
 
+export interface CollektCurationOptions {
+    curationId: string;
+    page?: number;
+    pageSize?: number;
+    forceRefresh?: boolean;
+}
+
+export interface CollektContractCollectionOptions {
+    contractAddress: string;
+    page?: number;
+    pageSize?: number;
+    forceRefresh?: boolean;
+}
+
 /**
  * ColleKT API Client
  */
@@ -52,7 +66,7 @@ export class CollektClient {
     }
 
     /**
-     * Get token collection with server-side caching and filtering
+     * Get token collection with server-side caching and filtering (USER galleries)
      */
     async getTokenCollection(options: CollektCollectionOptions): Promise<CollektCollectionResponse> {
         const { address, page = 1, pageSize = 20, forceRefresh = false } = options;
@@ -60,6 +74,88 @@ export class CollektClient {
         try {
             const params = new URLSearchParams({
                 address,
+                page: page.toString(),
+                pageSize: pageSize.toString(),
+                forceRefresh: forceRefresh.toString(),
+            });
+
+            const response = await fetch(`${this.baseUrl}/api/user?${params}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const result: CollektCollectionResponse = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || "Unknown API error");
+            }
+
+            return result;
+        } catch (error) {
+            console.error("ColleKT API error:", error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : "Unknown error",
+            };
+        }
+    }
+
+    /**
+     * Get curation token collection (CURATION galleries)
+     */
+    async getCurationCollection(options: CollektCurationOptions): Promise<CollektCollectionResponse> {
+        const { curationId, page = 1, pageSize = 20, forceRefresh = false } = options;
+
+        try {
+            const params = new URLSearchParams({
+                curationId,
+                page: page.toString(),
+                pageSize: pageSize.toString(),
+                forceRefresh: forceRefresh.toString(),
+            });
+
+            const response = await fetch(`${this.baseUrl}/api/curation?${params}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const result: CollektCollectionResponse = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || "Unknown API error");
+            }
+
+            return result;
+        } catch (error) {
+            console.error("ColleKT Curation API error:", error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : "Unknown error",
+            };
+        }
+    }
+
+    /**
+     * Get contract collection token collection (COLLECTION galleries)
+     */
+    async getContractCollection(options: CollektContractCollectionOptions): Promise<CollektCollectionResponse> {
+        const { contractAddress, page = 1, pageSize = 20, forceRefresh = false } = options;
+
+        try {
+            const params = new URLSearchParams({
+                contractAddress,
                 page: page.toString(),
                 pageSize: pageSize.toString(),
                 forceRefresh: forceRefresh.toString(),
@@ -84,7 +180,7 @@ export class CollektClient {
 
             return result;
         } catch (error) {
-            console.error("ColleKT API error:", error);
+            console.error("ColleKT Collection API error:", error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : "Unknown error",

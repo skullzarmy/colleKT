@@ -72,16 +72,31 @@ export default function NFTFrame({
         //     },
         // });
 
+        console.log("🎭 UNIFIED MEDIA DETECTION:", {
+            result: mediaTypeResult,
+            nftId: nft.id,
+            hasFormats: !!metadata.formats,
+            formatsCount: metadata.formats?.length || 0,
+            rawFormats: metadata.formats,
+            allAvailableUris: {
+                displayImage: nft.displayImage,
+                displayUri: metadata.displayUri,
+                image: metadata.image,
+                thumbnailUri: metadata.thumbnailUri,
+                artifactUri: metadata.artifactUri,
+            },
+        });
+
         // If media detection found a specific URI (from formats), use that
         if (mediaTypeResult.uri && mediaTypeResult.confidence > 0.8) {
-            // console.log("🎭 URI SELECTION: Using URI from media detection:", {
-            //     uri: mediaTypeResult.uri,
-            //     mimeType: mediaTypeResult.mimeType,
-            //     source: mediaTypeResult.source,
-            //     confidence: mediaTypeResult.confidence,
-            // });
-            // console.log("🔥 FINAL URI BEING USED:", mediaTypeResult.uri);
-            // console.log("🔥 FINAL MIME TYPE BEING USED:", mediaTypeResult.mimeType);
+            console.log("🎭 URI SELECTION: Using URI from media detection:", {
+                uri: mediaTypeResult.uri,
+                mimeType: mediaTypeResult.mimeType,
+                source: mediaTypeResult.source,
+                confidence: mediaTypeResult.confidence,
+            });
+            console.log("🔥 FINAL URI BEING USED:", mediaTypeResult.uri);
+            console.log("🔥 FINAL MIME TYPE BEING USED:", mediaTypeResult.mimeType);
             return {
                 uri: mediaTypeResult.uri,
                 mimeType: mediaTypeResult.mimeType,
@@ -113,6 +128,13 @@ export default function NFTFrame({
             const fallbackResult = detectMediaType(metadata, selectedUri);
             finalMimeType = fallbackResult.mimeType;
         }
+
+        console.log("🎭 FALLBACK URI SELECTION:", {
+            selectedUri,
+            finalMimeType,
+            totalPossibleUris: possibleUris.length,
+            imageUris: imageUris.length,
+        });
 
         return {
             uri: selectedUri,

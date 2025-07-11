@@ -6,37 +6,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { tzktSdkClient } from "@/lib/data/sources/tzkt-sdk-client";
+import { parseInput } from "@/lib/data/utils/input-parser";
+import { ParsedInput } from "@/lib/data/types/gallery-types";
 
 export default function HomePage() {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const router = useRouter();
-
-    const resolveDomainToAddress = async (domain: string): Promise<string | null> => {
-        try {
-            // Check if it's already a wallet address
-            if (
-                domain.startsWith("tz1") ||
-                domain.startsWith("tz2") ||
-                domain.startsWith("tz3") ||
-                domain.startsWith("KT1")
-            ) {
-                return domain;
-            }
-
-            // Try to resolve as domain
-            const domains = await tzktSdkClient.getDomainsByName(domain, 1);
-            if (domains.length > 0 && domains[0].address?.address) {
-                return domains[0].address.address;
-            }
-
-            return null;
-        } catch {
-            return null;
-        }
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,18 +23,18 @@ export default function HomePage() {
         setError("");
 
         try {
-            const cleanInput = input.trim();
-            const resolvedAddress = await resolveDomainToAddress(cleanInput);
+            const result: ParsedInput = await parseInput(input.trim());
 
-            if (!resolvedAddress) {
-                setError("Invalid address or domain name");
+            if (!result.isValid) {
+                setError(result.error || "Invalid input");
                 setIsLoading(false);
                 return;
             }
 
-            router.push(`/gallery/${resolvedAddress}`);
-        } catch {
-            setError("Failed to resolve address");
+            // Route based on parsed result
+            router.push(result.route);
+        } catch (error) {
+            setError("Failed to parse input");
             setIsLoading(false);
         }
     };
@@ -76,7 +53,7 @@ export default function HomePage() {
                     <div className="space-y-2">
                         <Input
                             type="text"
-                            placeholder="Enter wallet address or domain name"
+                            placeholder="Enter address, domain, or objkt.com URL"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             className="text-white bg-black border-gray-700 placeholder:text-gray-500 focus:border-white"
@@ -108,6 +85,36 @@ export default function HomePage() {
                             className="block text-gray-400 underline hover:text-white"
                         >
                             tz1Qi77tcJn9foeHHP1QHj6UX1m1vLVLMbuY
+                        </button>
+                        <button
+                            onClick={() =>
+                                setInput(
+                                    "https://objkt.com/curations/objkt/long-story-short-graphic-novel-by-swarleyart-b264a749"
+                                )
+                            }
+                            className="block text-gray-400 underline hover:text-white"
+                        >
+                            objkt.com curation (b264a749)
+                        </button>
+                        <button
+                            onClick={() => setInput("b264a749-2674-4baa-bc7c-b5ed8bafe54a")}
+                            className="block text-gray-400 underline hover:text-white"
+                        >
+                            Curation ID (gallery_id)
+                        </button>
+                        <button
+                            onClick={() =>
+                                setInput("https://objkt.com/collections/KT1VLVcGTw6UkwzMiPAn8SNcoMjicitQBGF6")
+                            }
+                            className="block text-gray-400 underline hover:text-white"
+                        >
+                            objkt.com collection
+                        </button>
+                        <button
+                            onClick={() => setInput("KT1VLVcGTw6UkwzMiPAn8SNcoMjicitQBGF6")}
+                            className="block text-gray-400 underline hover:text-white"
+                        >
+                            Collection contract
                         </button>
                     </div>
                 </div>

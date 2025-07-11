@@ -11,6 +11,8 @@ import { cacheManager } from "../cache/cache-manager";
 import { filterEngine, FilterResult } from "../filters/filter-engine";
 import { UnifiedToken, DataSource, UnifiedMetadata, TokenStandard } from "../types/token-types";
 import { tokenCollection, filteredCollection } from "../types/cache-types";
+import { GalleryType } from "../types/gallery-types";
+import { fetchCurationTokens, fetchCollectionTokens } from "../sources/objkt-queries";
 
 /**
  * Pagination configuration
@@ -32,6 +34,28 @@ export interface CollectionFetchOptions {
     applyFilters?: boolean; // Apply filter engine (default: true)
     cacheResults?: boolean; // Cache the results (default: true)
     sortChronologically?: boolean; // Sort by mint/transfer date (default: true)
+}
+
+/**
+ * Curation fetch options (NEW)
+ */
+export interface CurationFetchOptions {
+    curationId: string;
+    pagination?: PaginationConfig;
+    forceRefresh?: boolean;
+    applyFilters?: boolean;
+    cacheResults?: boolean;
+}
+
+/**
+ * Collection fetch options (contract-based) (NEW)
+ */
+export interface ContractCollectionFetchOptions {
+    contractAddress: string;
+    pagination?: PaginationConfig;
+    forceRefresh?: boolean;
+    applyFilters?: boolean;
+    cacheResults?: boolean;
 }
 
 /**
@@ -633,6 +657,376 @@ export class DataOrchestrator {
             const sortKeyB = b.sortKey || `${b.contractAddress}-${String(b.tokenId).padStart(10, "0")}`;
             return sortKeyA.localeCompare(sortKeyB);
         });
+    }
+
+    // ===== NEW GALLERY-SPECIFIC METHODS =====
+
+    /**
+     * Get CURATION gallery tokens via objkt → TzKT bridge
+     */
+    async getCurationTokenCollection(options: CurationFetchOptions): Promise<OrchestrationResult> {
+        const startTime = Date.now();
+        const {
+            curationId,
+            pagination = { page: 1, pageSize: this.defaultPageSize },
+            forceRefresh = false,
+            applyFilters = true,
+            cacheResults = true,
+        } = options;
+
+        // Normalize pagination
+        const page =
+            pagination.page || Math.floor((pagination.offset || 0) / (pagination.limit || this.defaultPageSize)) + 1;
+        const pageSize = pagination.pageSize || pagination.limit || this.defaultPageSize;
+
+        // Generate cache keys using new gallery-specific pattern
+        const filterHash = applyFilters ? filterEngine.generateFilterHash() : "none";
+
+        let tokens: UnifiedToken[] = [];
+        let cacheHit = false;
+        let cacheSource: "cache" | "api" | "hybrid" = "api";
+        let buildTimeMs: number | undefined;
+        let fetchTimeMs: number | undefined;
+        let filterTimeMs: number | undefined;
+        let cacheTimeMs: number | undefined;
+        let filterResult: FilterResult | undefined;
+
+        try {
+            // Step 1: Try cache first (unless force refresh)
+            if (!forceRefresh) {
+                const cacheStart = Date.now();
+                const cached = await cacheManager.getCurationTokens(curationId, filterHash);
+                cacheTimeMs = Date.now() - cacheStart;
+
+                if (cached.hit && cached.data) {
+                    tokens = cached.data;
+                    cacheHit = true;
+                    cacheSource = "cache";
+                }
+            }
+
+            // Step 2: If cache miss or force refresh, fetch via objkt → TzKT bridge
+            if (!cacheHit) {
+                const fetchStart = Date.now();
+
+                // Use objkt-queries bridge to fetch curation tokens
+                tokens = await fetchCurationTokens(curationId);
+
+                fetchTimeMs = Date.now() - fetchStart;
+
+                // Step 3: Apply filtering if requested
+                if (applyFilters && filterEngine.hasActiveFilters()) {
+                    const filterStart = Date.now();
+                    filterResult = filterEngine.applyFilters(tokens);
+                    tokens = filterResult.filteredTokens;
+                    filterTimeMs = Date.now() - filterStart;
+                }
+
+                // Step 4: Cache the results
+                if (cacheResults && tokens.length > 0) {
+                    const cacheStart = Date.now();
+                    await cacheManager.setCurationTokens(curationId, tokens, filterHash);
+                    cacheTimeMs = Date.now() - cacheStart;
+                }
+
+                buildTimeMs = Date.now() - startTime;
+                cacheSource = "api";
+            }
+
+            // Step 5: Apply pagination
+            const totalItems = tokens.length;
+            const totalPages = Math.ceil(totalItems / pageSize);
+            const startIndex = (page - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalItems);
+            const paginatedTokens = tokens.slice(startIndex, endIndex);
+
+            const totalTimeMs = Date.now() - startTime;
+
+            return {
+                tokens: paginatedTokens,
+                pagination: {
+                    currentPage: page,
+                    pageSize,
+                    totalItems,
+                    totalPages,
+                    hasNextPage: page < totalPages,
+                    hasPreviousPage: page > 1,
+                    startIndex,
+                    endIndex: endIndex - 1,
+                },
+                cache: {
+                    hit: cacheHit,
+                    source: cacheSource,
+                    buildTimeMs,
+                    cacheKey: `curation:${curationId}:${filterHash}`,
+                },
+                filtering: filterResult,
+                performance: {
+                    totalTimeMs,
+                    fetchTimeMs,
+                    filterTimeMs,
+                    cacheTimeMs,
+                },
+                dataSources: [
+                    {
+                        provider: "objkt",
+                        version: "1.0",
+                        endpoint: "https://data.objkt.com + https://api.tzkt.io",
+                        priority: 1,
+                    },
+                ],
+                fetchedAt: new Date(),
+            };
+        } catch (error) {
+            console.error("Curation orchestration error:", error);
+            throw new Error(
+                `Failed to orchestrate curation data for ${curationId}: ${
+                    error instanceof Error ? error.message : "Unknown error"
+                }`
+            );
+        }
+    }
+
+    /**
+     * Get COLLECTION gallery tokens via direct TzKT contract filtering
+     */
+    async getCollectionTokenCollection(options: ContractCollectionFetchOptions): Promise<OrchestrationResult> {
+        const startTime = Date.now();
+        const {
+            contractAddress,
+            pagination = { page: 1, pageSize: this.defaultPageSize },
+            forceRefresh = false,
+            applyFilters = true,
+            cacheResults = true,
+        } = options;
+
+        // Normalize pagination
+        const page =
+            pagination.page || Math.floor((pagination.offset || 0) / (pagination.limit || this.defaultPageSize)) + 1;
+        const pageSize = pagination.pageSize || pagination.limit || this.defaultPageSize;
+
+        // Generate cache keys using new gallery-specific pattern
+        const filterHash = applyFilters ? filterEngine.generateFilterHash() : "none";
+
+        let tokens: UnifiedToken[] = [];
+        let cacheHit = false;
+        let cacheSource: "cache" | "api" | "hybrid" = "api";
+        let buildTimeMs: number | undefined;
+        let fetchTimeMs: number | undefined;
+        let filterTimeMs: number | undefined;
+        let cacheTimeMs: number | undefined;
+        let filterResult: FilterResult | undefined;
+
+        try {
+            // Step 1: Try cache first (unless force refresh)
+            if (!forceRefresh) {
+                const cacheStart = Date.now();
+                const cached = await cacheManager.getCollectionTokens(contractAddress, filterHash);
+                cacheTimeMs = Date.now() - cacheStart;
+
+                if (cached.hit && cached.data) {
+                    tokens = cached.data;
+                    cacheHit = true;
+                    cacheSource = "cache";
+                }
+            }
+
+            // Step 2: If cache miss or force refresh, fetch via direct TzKT
+            if (!cacheHit) {
+                const fetchStart = Date.now();
+
+                // Use objkt-queries to fetch collection tokens directly from TzKT
+                tokens = await fetchCollectionTokens(contractAddress);
+
+                fetchTimeMs = Date.now() - fetchStart;
+
+                // Step 3: Apply filtering if requested
+                if (applyFilters && filterEngine.hasActiveFilters()) {
+                    const filterStart = Date.now();
+                    filterResult = filterEngine.applyFilters(tokens);
+                    tokens = filterResult.filteredTokens;
+                    filterTimeMs = Date.now() - filterStart;
+                }
+
+                // Step 4: Cache the results
+                if (cacheResults && tokens.length > 0) {
+                    const cacheStart = Date.now();
+                    await cacheManager.setCollectionTokens(contractAddress, tokens, filterHash);
+                    cacheTimeMs = Date.now() - cacheStart;
+                }
+
+                buildTimeMs = Date.now() - startTime;
+                cacheSource = "api";
+            }
+
+            // Step 5: Apply pagination
+            const totalItems = tokens.length;
+            const totalPages = Math.ceil(totalItems / pageSize);
+            const startIndex = (page - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalItems);
+            const paginatedTokens = tokens.slice(startIndex, endIndex);
+
+            const totalTimeMs = Date.now() - startTime;
+
+            return {
+                tokens: paginatedTokens,
+                pagination: {
+                    currentPage: page,
+                    pageSize,
+                    totalItems,
+                    totalPages,
+                    hasNextPage: page < totalPages,
+                    hasPreviousPage: page > 1,
+                    startIndex,
+                    endIndex: endIndex - 1,
+                },
+                cache: {
+                    hit: cacheHit,
+                    source: cacheSource,
+                    buildTimeMs,
+                    cacheKey: `collection:${contractAddress}:${filterHash}`,
+                },
+                filtering: filterResult,
+                performance: {
+                    totalTimeMs,
+                    fetchTimeMs,
+                    filterTimeMs,
+                    cacheTimeMs,
+                },
+                dataSources: [
+                    {
+                        provider: "tzkt",
+                        version: "1.0",
+                        endpoint: "https://api.tzkt.io",
+                        priority: 1,
+                    },
+                ],
+                fetchedAt: new Date(),
+            };
+        } catch (error) {
+            console.error("Collection orchestration error:", error);
+            throw new Error(
+                `Failed to orchestrate collection data for ${contractAddress}: ${
+                    error instanceof Error ? error.message : "Unknown error"
+                }`
+            );
+        }
+    }
+
+    /**
+     * Fetch collection tokens directly from TzKT with contract filter (NEW)
+     */
+    private async fetchCollectionTokensViaTzKT(contractAddress: string): Promise<UnifiedToken[]> {
+        // Build URL with contract filter
+        const url = new URL("https://api.tzkt.io/v1/tokens");
+        url.searchParams.set("contract", contractAddress);
+        url.searchParams.set("limit", "10000"); // Max limit to get everything
+
+        try {
+            const response = await fetch(url.toString(), {
+                method: "GET",
+                headers: {
+                    Accept: "application/json",
+                    "User-Agent": "colleKT/1.0",
+                },
+                signal: AbortSignal.timeout(120000), // 2 minutes timeout
+            });
+
+            if (!response.ok) {
+                throw new Error(`TzKT tokens API request failed: ${response.status} ${response.statusText}`);
+            }
+
+            const tokens = await response.json();
+
+            // Convert TzKT token format to UnifiedToken format
+            const convertedTokens = tokens
+                .map((tzktToken: any, index: number) => {
+                    try {
+                        return this.convertTzKTTokenToUnified(tzktToken);
+                    } catch (error) {
+                        console.error(`❌ ERROR converting collection token ${index}:`, error);
+                        return null;
+                    }
+                })
+                .filter((token: UnifiedToken | null): token is UnifiedToken => token !== null);
+
+            return convertedTokens;
+        } catch (error) {
+            console.error("❌ Failed to fetch collection tokens from TzKT:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Convert TzKT token format to UnifiedToken (for collections)
+     */
+    private convertTzKTTokenToUnified(tzktToken: any): UnifiedToken {
+        const metadata: UnifiedMetadata = {
+            name: tzktToken?.metadata?.name || undefined,
+            symbol: tzktToken?.metadata?.symbol || undefined,
+            decimals: tzktToken?.metadata?.decimals ? Number(tzktToken.metadata.decimals) : undefined,
+            description: tzktToken?.metadata?.description || undefined,
+            image: tzktToken?.metadata?.image || undefined,
+            artifactUri: tzktToken?.metadata?.artifactUri || undefined,
+            displayUri: tzktToken?.metadata?.displayUri || undefined,
+            thumbnailUri: tzktToken?.metadata?.thumbnailUri || undefined,
+            supply: tzktToken?.totalSupply || tzktToken?.metadata?.supply || undefined,
+            creators: tzktToken?.metadata?.creators || undefined,
+            attributes: tzktToken?.metadata?.attributes || undefined,
+            formats: tzktToken?.metadata?.formats || undefined,
+            raw: tzktToken?.metadata || undefined,
+        };
+
+        // Determine token standard
+        let standard: TokenStandard = "unknown";
+        if (tzktToken?.standard) {
+            switch (tzktToken.standard.toLowerCase()) {
+                case "fa2":
+                    standard = "fa2";
+                    break;
+                case "fa1.2":
+                case "fa12":
+                    standard = "fa1.2";
+                    break;
+                default:
+                    standard = "unknown";
+            }
+        }
+
+        const now = new Date();
+        const mintTime = tzktToken.firstMinted ? new Date(tzktToken.firstMinted) : now;
+
+        const unifiedToken: UnifiedToken = {
+            id: `${tzktToken?.contract?.address || "unknown"}_${tzktToken?.tokenId || "0"}`,
+            contractAddress: tzktToken?.contract?.address || "unknown",
+            contractAlias: tzktToken?.contract?.alias || undefined,
+            tokenId: tzktToken?.tokenId || "0",
+            balance: "1", // Collections show tokens, not balances
+            standard,
+            metadata,
+            source: {
+                provider: "tzkt",
+                version: "1.0",
+                endpoint: "https://api.tzkt.io",
+                priority: 1,
+            },
+            fetchedAt: now,
+            lastTransferAt: mintTime,
+            firstMintAt: mintTime,
+            isValid: !!(tzktToken?.metadata && tzktToken.contract?.address),
+            hasImage: !!(metadata.image || metadata.artifactUri || metadata.displayUri || metadata.thumbnailUri),
+            hasMetadata: !!tzktToken?.metadata,
+        };
+
+        // Set computed display fields
+        unifiedToken.displayImage =
+            metadata.displayUri || metadata.artifactUri || metadata.image || metadata.thumbnailUri;
+        unifiedToken.displayName = metadata.name || `Token #${unifiedToken.tokenId}`;
+
+        // Use mint timestamp for sort key
+        unifiedToken.sortKey = mintTime.toISOString();
+
+        return unifiedToken;
     }
 }
 

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { THREE_GetGifTexture } from "threejs-gif-texture";
+import { useViewState } from "@/contexts/ViewStateContext";
 
 interface MediaContentProps {
     uri: string;
@@ -24,12 +25,17 @@ export default function MediaContent({
     const [error, setError] = useState(false);
     const [loading, setLoading] = useState(!initialTexture); // Not loading if we have initial texture
     const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+    const { animationsEnabled } = useViewState();
 
     // Log for videos and GIFs to track instances
     if (mimeType?.startsWith("video/")) {
         console.log("🎬 VIDEO COMPONENT:", uri.substring(0, 50) + "...");
     } else if (mimeType?.includes("gif") || uri.toLowerCase().includes(".gif")) {
-        console.log("🎨 GIF COMPONENT:", uri.substring(0, 50) + "...");
+        console.log("🎨 GIF COMPONENT DETECTED:", {
+            uri: uri.substring(0, 80) + "...",
+            mimeType,
+            fullUri: uri,
+        });
     }
 
     // Helper function to detect if URI contains HTML content
@@ -224,7 +230,10 @@ export default function MediaContent({
 
         const loadAnimatedGif = async (gifUrl: string) => {
             try {
-                console.log("🎨 LOADING GIF WITH LIBRARY:", gifUrl.substring(0, 50) + "...");
+                console.log("🎨 LOADING GIF WITH LIBRARY:", {
+                    url: gifUrl.substring(0, 80) + "...",
+                    fullUrl: gifUrl,
+                });
 
                 const gifTexture = await THREE_GetGifTexture(gifUrl);
 
@@ -236,7 +245,7 @@ export default function MediaContent({
                 gifTexture.wrapS = THREE.ClampToEdgeWrapping;
                 gifTexture.wrapT = THREE.ClampToEdgeWrapping;
 
-                // ALWAYS PLAY - NO PAUSING LOGIC
+                // Start playing by default
                 gifTexture.play = true;
 
                 setTexture(gifTexture);
@@ -276,11 +285,12 @@ export default function MediaContent({
                 const isHtml = isHtmlContent(mediaUrl, mimeType);
 
                 console.log("🔍 MEDIA TYPE DETECTION:", {
-                    url: finalUrl.substring(0, 50) + "...",
+                    url: finalUrl.substring(0, 80) + "...",
                     mimeType,
                     isVideo,
                     isGif,
                     isHtml,
+                    fullUrl: finalUrl,
                 });
 
                 if (isHtml) {
@@ -302,7 +312,7 @@ export default function MediaContent({
                     video.loop = true;
                     video.muted = true;
                     video.playsInline = true;
-                    video.autoplay = true;
+                    video.autoplay = animationsEnabled; // Respect global setting
 
                     video.onloadeddata = () => {
                         console.log("🎬 CREATING TEXTURE:", uri.substring(0, 50) + "...");
@@ -325,19 +335,26 @@ export default function MediaContent({
                         }
 
                         console.log("🎬 STARTING PLAYBACK:", uri.substring(0, 50) + "...");
-                        const playPromise = video.play();
 
-                        if (playPromise !== undefined) {
-                            playPromise
-                                .then(() => {
-                                    console.log("✅ VIDEO PLAYING:", uri.substring(0, 50) + "...");
-                                    resolve(true);
-                                })
-                                .catch((error) => {
-                                    console.error("❌ PLAY ERROR:", error.message);
-                                    resolve(false);
-                                });
+                        // Only auto-play if animations are enabled
+                        if (animationsEnabled) {
+                            const playPromise = video.play();
+
+                            if (playPromise !== undefined) {
+                                playPromise
+                                    .then(() => {
+                                        console.log("✅ VIDEO PLAYING:", uri.substring(0, 50) + "...");
+                                        resolve(true);
+                                    })
+                                    .catch((error) => {
+                                        console.error("❌ PLAY ERROR:", error.message);
+                                        resolve(false);
+                                    });
+                            } else {
+                                resolve(true);
+                            }
                         } else {
+                            console.log("⏸️ VIDEO LOADED BUT PAUSED (animations disabled)");
                             resolve(true);
                         }
                     };
@@ -453,20 +470,34 @@ export default function MediaContent({
 
         // No initial texture, load normally
         loadMedia();
-    }, [uri, mimeType, initialTexture]);
+    }, [uri, mimeType, initialTexture, animationsEnabled]);
 
-    // NO GIF CONTROL - LET THEM ALL PLAY!
-    // useEffect(() => {
-    //     if (texture && "play" in texture && "gif" in texture) {
-    //         // This is a GIF texture from the library
-    //         const wasPlaying = texture.play;
-    //         texture.play = shouldAnimate;
+    // Control GIF and video animations based on global setting
+    useEffect(() => {
+        if (texture) {
+            // Handle GIF textures
+            if ("play" in texture && "gif" in texture) {
+                const wasPlaying = texture.play;
+                texture.play = animationsEnabled;
 
-    //         if (wasPlaying !== shouldAnimate) {
-    //             console.log(`🎨 GIF ${shouldAnimate ? "RESUMED" : "PAUSED"}:`, uri.substring(0, 50) + "...");
-    //         }
-    //     }
-    // }, [shouldAnimate, texture, uri]);
+                if (wasPlaying !== animationsEnabled) {
+                    console.log(`🎨 GIF ${animationsEnabled ? "RESUMED" : "PAUSED"}:`, uri.substring(0, 50) + "...");
+                }
+            }
+
+            // Handle video textures
+            if (texture instanceof THREE.VideoTexture) {
+                const video = texture.image as HTMLVideoElement;
+                if (video) {
+                    if (animationsEnabled && video.paused) {
+                        video.play().catch(() => {}); // Silently handle play errors
+                    } else if (!animationsEnabled && !video.paused) {
+                        video.pause();
+                    }
+                }
+            }
+        }
+    }, [animationsEnabled, texture, uri]);
 
     // Update material when texture changes
     useFrame(() => {

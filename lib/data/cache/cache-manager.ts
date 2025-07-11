@@ -7,7 +7,15 @@
 
 import { Redis } from "@upstash/redis";
 import { compressData, decompressData, CompressionConfig, DEFAULT_COMPRESSION_CONFIG } from "../utils/compression";
-import { CacheMetadata, TokenCollectionCacheEntry } from "../types/cache-types";
+import {
+    CacheMetadata,
+    TokenCollectionCacheEntry,
+    userCollection,
+    curationCollection,
+    contractCollection,
+    curationMetadata,
+    collectionMetadata,
+} from "../types/cache-types";
 import { UnifiedToken, DataSource } from "../types/token-types";
 
 /**
@@ -362,6 +370,108 @@ export class CacheManager {
             this.stats.averageBuildTimeMs =
                 (this.stats.averageBuildTimeMs * (this.stats.totalCacheBuilds - 1) + newBuildTime) /
                 this.stats.totalCacheBuilds;
+        }
+    }
+
+    // ===== GALLERY-SPECIFIC CACHE METHODS (NEW) =====
+
+    /**
+     * Get cached USER gallery tokens
+     */
+    async getUserTokens(address: string, filterHash: string): Promise<CacheResult<UnifiedToken[]>> {
+        const cacheKey = userCollection(address, filterHash);
+        return this.get<UnifiedToken[]>(cacheKey);
+    }
+
+    /**
+     * Set cached USER gallery tokens
+     */
+    async setUserTokens(address: string, tokens: UnifiedToken[], filterHash: string): Promise<CacheBuildResult> {
+        const cacheKey = userCollection(address, filterHash);
+        const ttlSeconds = 3600; // 1 hour for user galleries
+        return this.buildCache(cacheKey, tokens, ttlSeconds);
+    }
+
+    /**
+     * Get cached CURATION gallery tokens
+     */
+    async getCurationTokens(curationId: string, filterHash: string): Promise<CacheResult<UnifiedToken[]>> {
+        const cacheKey = curationCollection(curationId, filterHash);
+        return this.get<UnifiedToken[]>(cacheKey);
+    }
+
+    /**
+     * Set cached CURATION gallery tokens
+     */
+    async setCurationTokens(curationId: string, tokens: UnifiedToken[], filterHash: string): Promise<CacheBuildResult> {
+        const cacheKey = curationCollection(curationId, filterHash);
+        const ttlSeconds = 7200; // 2 hours for curations (rarely change)
+        return this.buildCache(cacheKey, tokens, ttlSeconds);
+    }
+
+    /**
+     * Get cached COLLECTION gallery tokens (contract-based)
+     */
+    async getCollectionTokens(contractAddress: string, filterHash: string): Promise<CacheResult<UnifiedToken[]>> {
+        const cacheKey = contractCollection(contractAddress, filterHash);
+        return this.get<UnifiedToken[]>(cacheKey);
+    }
+
+    /**
+     * Set cached COLLECTION gallery tokens (contract-based)
+     */
+    async setCollectionTokens(
+        contractAddress: string,
+        tokens: UnifiedToken[],
+        filterHash: string
+    ): Promise<CacheBuildResult> {
+        const cacheKey = contractCollection(contractAddress, filterHash);
+        const ttlSeconds = 1800; // 30 minutes for collections (contracts mint frequently)
+        return this.buildCache(cacheKey, tokens, ttlSeconds);
+    }
+
+    /**
+     * Gallery-specific cache invalidation methods
+     */
+
+    /**
+     * Clear all cache for a USER gallery (all filter variations)
+     */
+    async clearUserCache(address: string): Promise<number> {
+        const pattern = `tokens:user:${address}:*`;
+        return this.invalidatePattern(pattern);
+    }
+
+    /**
+     * Clear all cache for a CURATION gallery (all filter variations)
+     */
+    async clearCurationCache(curationId: string): Promise<number> {
+        const pattern = `*:curation:${curationId}:*`;
+        return this.invalidatePattern(pattern);
+    }
+
+    /**
+     * Clear all cache for a COLLECTION gallery (all filter variations)
+     */
+    async clearCollectionCache(contractAddress: string): Promise<number> {
+        const pattern = `*:collection:${contractAddress}:*`;
+        return this.invalidatePattern(pattern);
+    }
+
+    /**
+     * Clear all cache for a specific gallery type and identifier
+     */
+    async clearGalleryCache(galleryType: "USER" | "CURATION" | "COLLECTION", identifier: string): Promise<number> {
+        switch (galleryType) {
+            case "USER":
+                return this.clearUserCache(identifier);
+            case "CURATION":
+                return this.clearCurationCache(identifier);
+            case "COLLECTION":
+                return this.clearCollectionCache(identifier);
+            default:
+                console.warn(`Unknown gallery type: ${galleryType}`);
+                return 0;
         }
     }
 }
