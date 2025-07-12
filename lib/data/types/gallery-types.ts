@@ -97,7 +97,10 @@ export function isValidTezosDomain(domain: string): boolean {
 
 // Curation validation helpers
 export function isValidCurationId(id: string): boolean {
-    return /^\d+$/.test(id); // Integer ID like "146288"
+    // Support multiple curation ID formats:
+    // 1. Pure numeric ID like "146288"
+    // 2. Full UUID like "b264a749-2674-4baa-bc7c-b5ed8bafe54a"
+    return /^\d+$/.test(id) || /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id);
 }
 
 export function isValidCurationSlug(slug: string): boolean {

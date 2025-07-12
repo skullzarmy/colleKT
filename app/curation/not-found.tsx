@@ -17,6 +17,7 @@ export default function CurationNotFound() {
                     <ul className="text-sm text-gray-400 space-y-1">
                         <li>• A numeric ID (e.g., 146288)</li>
                         <li>• An 8-character hex slug (e.g., b264a749)</li>
+                        <li>• A full UUID (e.g., b264a749-2674-4baa-bc7c-b5ed8bafe54a)</li>
                     </ul>
                 </div>
 

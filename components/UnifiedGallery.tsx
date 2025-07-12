@@ -4,20 +4,22 @@ import { useEffect, useState, Component } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useViewState } from "@/contexts/ViewStateContext";
 import { useTezosDomain } from "@/hooks/use-tezos-domain";
+import { useGalleryMetadata } from "@/hooks/use-gallery-metadata";
 import { collektClient } from "@/lib/data/sources/collekt-client";
 import { UnifiedToken } from "@/lib/data/types/token-types";
 import * as THREE from "three";
+import LoadingAnimation from "./LoadingAnimation";
 
 // Dynamically import Gallery3D with no SSR to prevent hydration issues
 const Gallery3D = dynamic(() => import("@/components/Gallery3D"), {
     ssr: false,
     loading: () => (
         <div className="flex items-center justify-center min-h-screen bg-black">
-            <div className="space-y-4 text-center">
-                <div className="w-12 h-12 mx-auto border-4 rounded-full border-cyan-400 border-t-transparent animate-spin"></div>
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                <LoadingAnimation />
                 <p className="text-xl text-white">Loading 3D Gallery...</p>
             </div>
         </div>
@@ -138,6 +140,7 @@ export default function UnifiedGallery({
     const router = useRouter();
     const pathname = usePathname();
     const { domain, isLoading: domainLoading, displayName } = useTezosDomain(address);
+    const galleryMetadata = useGalleryMetadata(address, domain, displayName);
     const [nfts, setNfts] = useState<UnifiedToken[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -167,13 +170,26 @@ export default function UnifiedGallery({
     // Convert page number to room number (0-based)
     const currentRoom = currentPage - 1;
 
-    // Update page title when domain loads (only if enabled)
+    // Update page title when metadata loads (only if enabled)
     useEffect(() => {
-        if (enableDocumentTitle && !domainLoading) {
-            const title = domain ? `${domain}'s ColleKT - NFT Gallery` : `${displayName}'s ColleKT - NFT Gallery`;
+        if (enableDocumentTitle && !galleryMetadata.isLoading) {
+            let title = "ColleKT - NFT Gallery";
+
+            switch (galleryMetadata.type) {
+                case "USER":
+                    title = `${galleryMetadata.name}'s ColleKT - NFT Gallery`;
+                    break;
+                case "CURATION":
+                    title = `${galleryMetadata.name} - Curated Collection`;
+                    break;
+                case "COLLECTION":
+                    title = `${galleryMetadata.name} - NFT Collection`;
+                    break;
+            }
+
             document.title = title;
         }
-    }, [domain, displayName, domainLoading, enableDocumentTitle]);
+    }, [galleryMetadata, enableDocumentTitle]);
 
     // Refresh handler to force cache rebuild
     const handleRefresh = async () => {
@@ -545,8 +561,8 @@ export default function UnifiedGallery({
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-black">
-                <div className="space-y-4 text-center">
-                    <Loader2 className="w-12 h-12 mx-auto text-cyan-400 animate-spin" />
+                <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                    <LoadingAnimation />
                     <p className="text-xl text-white">{loadingProgress}</p>
                     <p className="text-white/60">Loading your collection from {address}</p>
                     {!isBasePage && <p className="text-sm text-cyan-400">Page {currentPage}</p>}

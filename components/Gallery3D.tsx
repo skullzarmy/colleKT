@@ -3,10 +3,12 @@ import { Canvas } from "@react-three/fiber";
 import { Environment, Html } from "@react-three/drei";
 import { UnifiedToken } from "../lib/data/types/token-types";
 import GalleryRoom from "./gallery/GalleryRoom";
+import GalleryTitle from "./gallery-title";
 import GalleryControls from "./gallery/ui/GalleryControls";
 import RoomNavigation from "./gallery/ui/RoomNavigation";
 import GalleryFooter from "./gallery/ui/GalleryFooter";
 import { useViewState } from "@/contexts/ViewStateContext";
+import LoadingAnimation from "./LoadingAnimation";
 
 export type CameraMode = "walk" | "overview";
 
@@ -93,11 +95,22 @@ export default function Gallery3D({
                 <Suspense
                     fallback={
                         <Html center>
-                            <div className="text-xl text-white">Loading Room {currentRoom + 1}...</div>
+                            <div className="flex flex-col items-center justify-center space-y-4">
+                                <LoadingAnimation />
+                                <div className="text-xl text-white">Loading Room {currentRoom + 1}...</div>
+                            </div>
                         </Html>
                     }
                 >
                     <Environment preset="warehouse" />
+                    <GalleryTitle
+                        address={address}
+                        domain={domain}
+                        displayName={displayName}
+                        position={[0, 15, -20]}
+                        fontSize={2.0}
+                        color="#00bcd4"
+                    />
                     <GalleryRoom
                         nfts={currentRoomNFTs}
                         roomNumber={currentRoom}

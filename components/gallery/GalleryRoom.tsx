@@ -6,6 +6,7 @@ import NFTFrame from "../nft-frame";
 import GalleryLighting from "./environment/GalleryLighting";
 import GalleryWalls from "./environment/GalleryWalls";
 import Door from "./environment/Door";
+import Reggie from "./Reggie";
 import RoomTitle from "./ui/RoomTitle";
 import WalkController from "./controls/WalkController";
 import OverviewController from "./controls/OverviewController";
@@ -204,6 +205,7 @@ export default function GalleryRoom({
                     domain={domain}
                     displayName={displayName}
                     hallwayLength={30}
+                    hallwayWidth={12}
                 />
                 {/* Camera Controls */}
                 {cameraMode === "walk" && (
@@ -229,6 +231,7 @@ export default function GalleryRoom({
                 domain={domain}
                 displayName={displayName}
                 hallwayLength={hallwayLength}
+                hallwayWidth={hallwayWidth}
             />
 
             {/* NFT Frames with proper aspect ratios */}
@@ -266,6 +269,15 @@ export default function GalleryRoom({
                     onClick={onNextRoom || (() => {})}
                 />
             )}
+
+            {/* Reggie the Mascot - positioned in far right corner near next room door */}
+            <Reggie
+                position={[hallwayWidth - 0.5, 0, hallwayLength - 0.5]}
+                scale={0.75}
+                rotation={[0, Math.PI - 0.3, 0]}
+                audioSrc="/hamster-dance.mp3"
+                speechText="Hi, I'm Reggie!"
+            />
 
             {/* Camera Controls */}
             {cameraMode === "walk" && (

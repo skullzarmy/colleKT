@@ -8,8 +8,11 @@ export default function CurationPage() {
     const params = useParams();
     const id = params.id as string;
 
-    // Validate curation ID format (integer or 8-char hex slug)
-    const isValidId = /^\d+$/.test(id) || /^[a-f0-9]{8}$/.test(id);
+    // Validate curation ID format (integer, 8-char hex slug, or full UUID)
+    const isValidId =
+        /^\d+$/.test(id) ||
+        /^[a-f0-9]{8}$/.test(id) ||
+        /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id);
     if (!isValidId) {
         notFound();
     }
