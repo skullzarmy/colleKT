@@ -10,7 +10,6 @@ import Reggie from "./Reggie";
 import RoomTitle from "./ui/RoomTitle";
 import WalkController from "./controls/WalkController";
 import OverviewController from "./controls/OverviewController";
-import MobileTouchControls from "./controls/MobileTouchControls";
 import { CameraMode } from "./ui/CameraModeSelector";
 import { getImageDimensions, getIPFSUrl } from "../../lib/utils";
 
@@ -208,12 +207,7 @@ export default function GalleryRoom({
                     hallwayWidth={12}
                 />
                 {/* Camera Controls */}
-                {cameraMode === "walk" && (
-                    <>
-                        <WalkController hallwayLength={30} hallwayWidth={12} />
-                        <MobileTouchControls />
-                    </>
-                )}
+                {cameraMode === "walk" && <WalkController hallwayLength={30} hallwayWidth={12} />}
                 {cameraMode === "overview" && <OverviewController />}
             </>
         );
@@ -280,12 +274,7 @@ export default function GalleryRoom({
             />
 
             {/* Camera Controls */}
-            {cameraMode === "walk" && (
-                <>
-                    <WalkController hallwayLength={hallwayLength} hallwayWidth={hallwayWidth} />
-                    <MobileTouchControls />
-                </>
-            )}
+            {cameraMode === "walk" && <WalkController hallwayLength={hallwayLength} hallwayWidth={hallwayWidth} />}
 
             {cameraMode === "overview" && <OverviewController hallwayLength={hallwayLength} />}
         </>

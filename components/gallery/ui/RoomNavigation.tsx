@@ -106,8 +106,8 @@ export default function RoomNavigation({
                     className={`
                         bg-black/80 backdrop-blur-md rounded-2xl border border-white/20 
                         transition-all duration-300 ease-in-out
-                        ${isExpanded ? "px-6 py-4" : "px-4 py-3"}
-                        hover:bg-black/90 hover:border-white/30
+                        ${isExpanded ? "px-3 py-3 sm:px-6 sm:py-4" : "px-2 py-2 sm:px-4 sm:py-3"}
+                        hover:bg-black/90 hover:border-white/30 max-w-[90vw] sm:max-w-none
                     `}
                     onMouseEnter={() => setIsExpanded(true)}
                     onMouseLeave={() => {
@@ -118,20 +118,20 @@ export default function RoomNavigation({
                 >
                     {/* Compact view */}
                     {!isExpanded && (
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
                             <button
                                 onClick={onPrevRoom}
                                 disabled={currentRoom === 0}
-                                className="p-2 transition-colors rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-1.5 transition-colors rounded-full sm:p-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <ChevronLeft size={16} className="text-white" />
+                                <ChevronLeft size={14} className="text-white sm:w-4 sm:h-4" />
                             </button>
 
-                            <div className="flex flex-col items-center min-w-[80px]">
-                                <span className="text-sm font-medium text-white">
+                            <div className="flex flex-col items-center min-w-[60px] sm:min-w-[80px]">
+                                <span className="text-xs font-medium text-white sm:text-sm">
                                     {currentRoom + 1}/{totalRooms}
                                 </span>
-                                <div className="relative w-16 h-1 mt-1">
+                                <div className="relative w-12 h-1 mt-1 sm:w-16">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <div
@@ -159,28 +159,28 @@ export default function RoomNavigation({
                             <button
                                 onClick={onNextRoom}
                                 disabled={currentRoom === totalRooms - 1}
-                                className="p-2 transition-colors rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-1.5 transition-colors rounded-full sm:p-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <ChevronRight size={16} className="text-white" />
+                                <ChevronRight size={14} className="text-white sm:w-4 sm:h-4" />
                             </button>
                         </div>
                     )}
 
                     {/* Expanded view */}
                     {isExpanded && (
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
                             <button
                                 onClick={onPrevRoom}
                                 disabled={currentRoom === 0}
-                                className="flex items-center gap-2 px-3 py-2 transition-colors rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex items-center gap-1 px-2 py-1.5 transition-colors rounded-lg sm:gap-2 sm:px-3 sm:py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <ChevronLeft size={16} className="text-white" />
-                                <span className="text-sm text-white">Previous</span>
+                                <ChevronLeft size={14} className="text-white sm:w-4 sm:h-4" />
+                                <span className="text-xs text-white sm:text-sm">Previous</span>
                             </button>
 
-                            <div className="flex flex-col items-center min-w-[140px]">
+                            <div className="flex flex-col items-center min-w-[120px] sm:min-w-[140px]">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-medium text-white">
+                                    <span className="text-sm font-medium text-white sm:text-base">
                                         Room {currentRoom + 1} of {totalRooms}
                                     </span>
                                     {onGoToRoom && (
@@ -189,7 +189,7 @@ export default function RoomNavigation({
                                             className="p-1 transition-colors rounded hover:bg-white/20"
                                             title="Jump to room"
                                         >
-                                            <Hash size={14} className="text-cyan-400" />
+                                            <Hash size={12} className="text-cyan-400 sm:w-3.5 sm:h-3.5" />
                                         </button>
                                     )}
                                     {onGoToRoom && totalRooms > 1 && (
@@ -200,7 +200,7 @@ export default function RoomNavigation({
                                                     className="p-1 transition-colors rounded hover:bg-white/20"
                                                     title="Random room"
                                                 >
-                                                    <Dices size={14} className="text-purple-400" />
+                                                    <Dices size={12} className="text-purple-400 sm:w-3.5 sm:h-3.5" />
                                                 </button>
                                             </TooltipTrigger>
                                             <TooltipContent>
@@ -210,7 +210,7 @@ export default function RoomNavigation({
                                     )}
                                 </div>
 
-                                <div className="relative w-32 h-3 mt-2 mb-1">
+                                <div className="relative w-24 h-2 mt-2 mb-1 sm:w-32 sm:h-3">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <div
@@ -256,7 +256,7 @@ export default function RoomNavigation({
                                         onChange={(e) => setJumpInput(e.target.value)}
                                         onKeyDown={handleKeyPress}
                                         placeholder="Room #"
-                                        className="w-20 px-2 py-1 text-sm text-white placeholder-gray-400 border rounded bg-white/10 border-white/20 focus:outline-none focus:border-cyan-400"
+                                        className="w-16 px-2 py-1 text-xs text-white placeholder-gray-400 border rounded sm:w-20 sm:text-sm bg-white/10 border-white/20 focus:outline-none focus:border-cyan-400"
                                     />
                                     <button
                                         onClick={handleJumpSubmit}
@@ -270,10 +270,10 @@ export default function RoomNavigation({
                             <button
                                 onClick={onNextRoom}
                                 disabled={currentRoom === totalRooms - 1}
-                                className="flex items-center gap-2 px-3 py-2 transition-colors rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex items-center gap-1 px-2 py-1.5 transition-colors rounded-lg sm:gap-2 sm:px-3 sm:py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <span className="text-sm text-white">Next</span>
-                                <ChevronRight size={16} className="text-white" />
+                                <span className="text-xs text-white sm:text-sm">Next</span>
+                                <ChevronRight size={14} className="text-white sm:w-4 sm:h-4" />
                             </button>
                         </div>
                     )}

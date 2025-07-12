@@ -10,6 +10,8 @@ interface ReggieProps {
     rotation?: [number, number, number];
     audioSrc?: string;
     speechText?: string;
+    artistName?: string;
+    artistUrl?: string;
 }
 
 export default function Reggie({
@@ -18,6 +20,8 @@ export default function Reggie({
     rotation = [0, 0, 0],
     audioSrc,
     speechText = "Hi, I'm Reggie!",
+    artistName = "CobwebSaints",
+    artistUrl = "https://rejkt.xyz/artist/tz1L5weVPFzw7VuTPY8JZdmFVDyrmfAEdhSu",
 }: ReggieProps) {
     const groupRef = useRef<Group>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -80,6 +84,12 @@ export default function Reggie({
         }, 3000);
     };
 
+    const handlePlacardClick = () => {
+        if (artistUrl && typeof window !== "undefined") {
+            window.open(artistUrl, "_blank", "noopener,noreferrer");
+        }
+    };
+
     return (
         <>
             <group
@@ -116,6 +126,35 @@ export default function Reggie({
 
                 {/* The actual Reggie model */}
                 <primitive object={clonedScene} />
+            </group>
+
+            {/* Artist Attribution Placard - positioned on nearby wall */}
+            <group
+                position={[position[0] - 0.5, position[1] + 0.5, position[2] + 0.5]}
+                rotation={[0, Math.PI, 0]}
+                onClick={handlePlacardClick}
+                onPointerEnter={() => setIsHovered(true)}
+                onPointerLeave={() => setIsHovered(false)}
+            >
+                {/* Brass backing plate */}
+                <Box args={[0.8, 0.3, 0.02]}>
+                    <meshStandardMaterial color="#b8860b" metalness={0.8} roughness={0.2} />
+                </Box>
+
+                {/* White marble text */}
+                <Text position={[0, 0.05, 0.015]} fontSize={0.08} color="#000000" anchorX="center" anchorY="middle">
+                    Reggie
+                </Text>
+
+                {/* Subtle artist designation */}
+                <Text position={[0, -0.05, 0.015]} fontSize={0.04} color="#000000" anchorX="center" anchorY="middle">
+                    by {artistName}
+                </Text>
+
+                {/* Invisible clickable area */}
+                <Box args={[1.0, 0.4, 0.1]} visible={false}>
+                    <meshBasicMaterial transparent opacity={0} />
+                </Box>
             </group>
 
             {/* Speech Bubble - positioned in world space, not rotated with Reggie */}

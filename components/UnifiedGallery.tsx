@@ -146,6 +146,7 @@ export default function UnifiedGallery({
     const [error, setError] = useState<string | null>(null);
     const [selectedNFT, setSelectedNFT] = useState<UnifiedToken | null>(null);
     const [use3D, setUse3D] = useState(true);
+    const [isMobile, setIsMobile] = useState(false);
     const [galleryError, setGalleryError] = useState<string | null>(null);
     const [loadingProgress, setLoadingProgress] = useState<string>("Fetching NFTs...");
     const [preloadedTextures, setPreloadedTextures] = useState<Map<string, THREE.Texture>>(new Map());
@@ -169,6 +170,47 @@ export default function UnifiedGallery({
 
     // Convert page number to room number (0-based)
     const currentRoom = currentPage - 1;
+
+    // Check for keyboard availability on mount
+    useEffect(() => {
+        const checkKeyboardAvailability = () => {
+            // Multiple ways to detect if a physical keyboard is available:
+            // 1. Navigator Keyboard API (experimental)
+            // 2. Check if primary input is touch vs pointer
+            // 3. Check for touch capability
+            const nav = navigator as any;
+            const hasKeyboardAPI = nav.keyboard;
+            const hasFinePointer = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+            const hasNoTouch = !("ontouchstart" in window);
+
+            // Assume keyboard is available if:
+            // - Keyboard API exists, OR
+            // - Device has fine pointer control (mouse/trackpad), OR
+            // - Device doesn't support touch
+            const hasKeyboard = hasKeyboardAPI || hasFinePointer || hasNoTouch;
+
+            setIsMobile(!hasKeyboard);
+        };
+
+        checkKeyboardAvailability();
+
+        // Listen for media query changes (pointer type changes)
+        if (window.matchMedia) {
+            const pointerQuery = window.matchMedia("(pointer: fine)");
+            const handlePointerChange = () => checkKeyboardAvailability();
+
+            // Modern browsers
+            if (pointerQuery.addEventListener) {
+                pointerQuery.addEventListener("change", handlePointerChange);
+                return () => pointerQuery.removeEventListener("change", handlePointerChange);
+            }
+            // Fallback for older browsers
+            else if (pointerQuery.addListener) {
+                pointerQuery.addListener(handlePointerChange);
+                return () => pointerQuery.removeListener(handlePointerChange);
+            }
+        }
+    }, []);
 
     // Update page title when metadata loads (only if enabled)
     useEffect(() => {
@@ -629,7 +671,7 @@ export default function UnifiedGallery({
                     >
                         <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                     </Button>
-                    {galleryError && (
+                    {galleryError && !isMobile && (
                         <Button
                             onClick={() => setUse3D(!use3D)}
                             variant="outline"
@@ -638,11 +680,16 @@ export default function UnifiedGallery({
                             {use3D ? "Switch to 2D" : "Try 3D"}
                         </Button>
                     )}
+                    {isMobile && (
+                        <div className="px-3 py-1 text-xs text-white/70 rounded bg-black/50 backdrop-blur-sm">
+                            Mobile 2D Mode
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* 3D Gallery with Error Boundary */}
-            {use3D ? (
+            {/* 3D Gallery with Error Boundary - Desktop only */}
+            {use3D && !isMobile ? (
                 <ErrorBoundary
                     fallback={
                         <div className="flex items-center justify-center min-h-screen bg-black">

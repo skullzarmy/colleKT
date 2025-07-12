@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
 
 export default function MobileTouchControls() {
@@ -88,101 +89,103 @@ export default function MobileTouchControls() {
     };
 
     return (
-        <div className="fixed inset-0 pointer-events-none">
-            {/* Movement Pad (Left Side) */}
-            <div className="absolute pointer-events-auto bottom-4 left-4">
-                <div className="relative w-32 h-32">
-                    {/* Center circle */}
-                    <div className="absolute w-8 h-8 -mt-4 -ml-4 rounded-full top-1/2 left-1/2 bg-white/20"></div>
+        <Html fullscreen transform={false}>
+            <div className="fixed inset-0 pointer-events-none">
+                {/* Movement Pad (Left Side) */}
+                <div className="absolute pointer-events-auto bottom-4 left-4">
+                    <div className="relative w-32 h-32">
+                        {/* Center circle */}
+                        <div className="absolute w-8 h-8 -mt-4 -ml-4 rounded-full top-1/2 left-1/2 bg-white/20"></div>
 
-                    {/* Movement buttons */}
-                    <button
-                        className="absolute top-0 flex items-center justify-center w-12 h-12 -ml-6 text-lg text-white border rounded-full left-1/2 bg-black/50 border-white/30"
-                        onTouchStart={() => handleTouchStart("forward")}
-                        onTouchEnd={() => handleTouchEnd("forward")}
-                        onMouseDown={() => handleTouchStart("forward")}
-                        onMouseUp={() => handleTouchEnd("forward")}
-                    >
-                        ↑
-                    </button>
-                    <button
-                        className="absolute bottom-0 flex items-center justify-center w-12 h-12 -ml-6 text-lg text-white border rounded-full left-1/2 bg-black/50 border-white/30"
-                        onTouchStart={() => handleTouchStart("backward")}
-                        onTouchEnd={() => handleTouchEnd("backward")}
-                        onMouseDown={() => handleTouchStart("backward")}
-                        onMouseUp={() => handleTouchEnd("backward")}
-                    >
-                        ↓
-                    </button>
-                    <button
-                        className="absolute left-0 flex items-center justify-center w-12 h-12 -mt-6 text-lg text-white border rounded-full top-1/2 bg-black/50 border-white/30"
-                        onTouchStart={() => handleTouchStart("left")}
-                        onTouchEnd={() => handleTouchEnd("left")}
-                        onMouseDown={() => handleTouchStart("left")}
-                        onMouseUp={() => handleTouchEnd("left")}
-                    >
-                        ←
-                    </button>
-                    <button
-                        className="absolute right-0 flex items-center justify-center w-12 h-12 -mt-6 text-lg text-white border rounded-full top-1/2 bg-black/50 border-white/30"
-                        onTouchStart={() => handleTouchStart("right")}
-                        onTouchEnd={() => handleTouchEnd("right")}
-                        onMouseDown={() => handleTouchStart("right")}
-                        onMouseUp={() => handleTouchEnd("right")}
-                    >
-                        →
-                    </button>
-                </div>
-            </div>
-
-            {/* Turn Controls (Right Side) */}
-            <div className="absolute pointer-events-auto bottom-4 right-4">
-                <div className="flex flex-col gap-2">
-                    {/* Vertical movement */}
-                    <div className="flex gap-2">
+                        {/* Movement buttons */}
                         <button
-                            className="flex items-center justify-center w-12 h-12 text-sm text-white border rounded-full bg-black/50 border-white/30"
-                            onTouchStart={() => handleTouchStart("up")}
-                            onTouchEnd={() => handleTouchEnd("up")}
-                            onMouseDown={() => handleTouchStart("up")}
-                            onMouseUp={() => handleTouchEnd("up")}
+                            className="absolute top-0 flex items-center justify-center w-12 h-12 -ml-6 text-lg text-white border rounded-full left-1/2 bg-black/50 border-white/30"
+                            onTouchStart={() => handleTouchStart("forward")}
+                            onTouchEnd={() => handleTouchEnd("forward")}
+                            onMouseDown={() => handleTouchStart("forward")}
+                            onMouseUp={() => handleTouchEnd("forward")}
                         >
-                            R
+                            ↑
                         </button>
                         <button
-                            className="flex items-center justify-center w-12 h-12 text-sm text-white border rounded-full bg-black/50 border-white/30"
-                            onTouchStart={() => handleTouchStart("down")}
-                            onTouchEnd={() => handleTouchEnd("down")}
-                            onMouseDown={() => handleTouchStart("down")}
-                            onMouseUp={() => handleTouchEnd("down")}
+                            className="absolute bottom-0 flex items-center justify-center w-12 h-12 -ml-6 text-lg text-white border rounded-full left-1/2 bg-black/50 border-white/30"
+                            onTouchStart={() => handleTouchStart("backward")}
+                            onTouchEnd={() => handleTouchEnd("backward")}
+                            onMouseDown={() => handleTouchStart("backward")}
+                            onMouseUp={() => handleTouchEnd("backward")}
                         >
-                            F
-                        </button>
-                    </div>
-
-                    {/* Turn controls */}
-                    <div className="flex gap-2">
-                        <button
-                            className="flex items-center justify-center w-12 h-12 text-sm text-white border rounded-full bg-black/50 border-white/30"
-                            onTouchStart={() => handleTouchStart("turnLeft")}
-                            onTouchEnd={() => handleTouchEnd("turnLeft")}
-                            onMouseDown={() => handleTouchStart("turnLeft")}
-                            onMouseUp={() => handleTouchEnd("turnLeft")}
-                        >
-                            Q
+                            ↓
                         </button>
                         <button
-                            className="flex items-center justify-center w-12 h-12 text-sm text-white border rounded-full bg-black/50 border-white/30"
-                            onTouchStart={() => handleTouchStart("turnRight")}
-                            onTouchEnd={() => handleTouchEnd("turnRight")}
-                            onMouseDown={() => handleTouchStart("turnRight")}
-                            onMouseUp={() => handleTouchEnd("turnRight")}
+                            className="absolute left-0 flex items-center justify-center w-12 h-12 -mt-6 text-lg text-white border rounded-full top-1/2 bg-black/50 border-white/30"
+                            onTouchStart={() => handleTouchStart("left")}
+                            onTouchEnd={() => handleTouchEnd("left")}
+                            onMouseDown={() => handleTouchStart("left")}
+                            onMouseUp={() => handleTouchEnd("left")}
                         >
-                            E
+                            ←
+                        </button>
+                        <button
+                            className="absolute right-0 flex items-center justify-center w-12 h-12 -mt-6 text-lg text-white border rounded-full top-1/2 bg-black/50 border-white/30"
+                            onTouchStart={() => handleTouchStart("right")}
+                            onTouchEnd={() => handleTouchEnd("right")}
+                            onMouseDown={() => handleTouchStart("right")}
+                            onMouseUp={() => handleTouchEnd("right")}
+                        >
+                            →
                         </button>
                     </div>
                 </div>
+
+                {/* Turn Controls (Right Side) */}
+                <div className="absolute pointer-events-auto bottom-4 right-4">
+                    <div className="flex flex-col gap-2">
+                        {/* Vertical movement */}
+                        <div className="flex gap-2">
+                            <button
+                                className="flex items-center justify-center w-12 h-12 text-sm text-white border rounded-full bg-black/50 border-white/30"
+                                onTouchStart={() => handleTouchStart("up")}
+                                onTouchEnd={() => handleTouchEnd("up")}
+                                onMouseDown={() => handleTouchStart("up")}
+                                onMouseUp={() => handleTouchEnd("up")}
+                            >
+                                R
+                            </button>
+                            <button
+                                className="flex items-center justify-center w-12 h-12 text-sm text-white border rounded-full bg-black/50 border-white/30"
+                                onTouchStart={() => handleTouchStart("down")}
+                                onTouchEnd={() => handleTouchEnd("down")}
+                                onMouseDown={() => handleTouchStart("down")}
+                                onMouseUp={() => handleTouchEnd("down")}
+                            >
+                                F
+                            </button>
+                        </div>
+
+                        {/* Turn controls */}
+                        <div className="flex gap-2">
+                            <button
+                                className="flex items-center justify-center w-12 h-12 text-sm text-white border rounded-full bg-black/50 border-white/30"
+                                onTouchStart={() => handleTouchStart("turnLeft")}
+                                onTouchEnd={() => handleTouchEnd("turnLeft")}
+                                onMouseDown={() => handleTouchStart("turnLeft")}
+                                onMouseUp={() => handleTouchEnd("turnLeft")}
+                            >
+                                Q
+                            </button>
+                            <button
+                                className="flex items-center justify-center w-12 h-12 text-sm text-white border rounded-full bg-black/50 border-white/30"
+                                onTouchStart={() => handleTouchStart("turnRight")}
+                                onTouchEnd={() => handleTouchEnd("turnRight")}
+                                onMouseDown={() => handleTouchStart("turnRight")}
+                                onMouseUp={() => handleTouchEnd("turnRight")}
+                            >
+                                E
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        </Html>
     );
 }
