@@ -26,6 +26,7 @@ export default function Reggie({
     const groupRef = useRef<Group>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isHovered, setIsHovered] = useState(false);
+    const [isPlacardHovered, setIsPlacardHovered] = useState(false);
     const [showSpeechBubble, setShowSpeechBubble] = useState(false);
 
     // Load the GLB model
@@ -48,7 +49,7 @@ export default function Reggie({
     // Update cursor style based on hover state
     useEffect(() => {
         if (typeof document !== "undefined") {
-            document.body.style.cursor = isHovered ? "pointer" : "default";
+            document.body.style.cursor = isHovered || isPlacardHovered ? "pointer" : "default";
         }
 
         return () => {
@@ -56,7 +57,7 @@ export default function Reggie({
                 document.body.style.cursor = "default";
             }
         };
-    }, [isHovered]);
+    }, [isHovered, isPlacardHovered]);
 
     // Clone and scale the scene
     const clonedScene = scene.clone();
@@ -133,8 +134,8 @@ export default function Reggie({
                 position={[position[0] - 0.5, position[1] + 0.5, position[2] + 0.5]}
                 rotation={[0, Math.PI, 0]}
                 onClick={handlePlacardClick}
-                onPointerEnter={() => setIsHovered(true)}
-                onPointerLeave={() => setIsHovered(false)}
+                onPointerEnter={() => setIsPlacardHovered(true)}
+                onPointerLeave={() => setIsPlacardHovered(false)}
             >
                 {/* Brass backing plate */}
                 <Box args={[0.8, 0.3, 0.02]}>
