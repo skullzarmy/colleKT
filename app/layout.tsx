@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ViewStateProvider } from "@/contexts/ViewStateContext";
+import UmamiAnalytics from "@/components/analytics/UmamiAnalytics";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,14 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-                <script
-                    defer
-                    src="https://cloud.umami.is/script.js"
-                    data-website-id="6ab32fc3-5c0e-449e-95e0-2f6a81164bc8"
-                ></script>
             </head>
             <body className={inter.className} suppressHydrationWarning>
                 <ViewStateProvider>{children}</ViewStateProvider>
+                <UmamiAnalytics />
             </body>
         </html>
     );
