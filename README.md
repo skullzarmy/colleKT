@@ -14,7 +14,7 @@
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fskullzarmy%2FcolleKT&env=CACHE_ENABLED,CACHE_TTL_SECONDS,UPSTASH_REDIS_REST_TOKEN,UPSTASH_REDIS_REST_URL&envDescription=To%20enable%20API%20response%20caching%2C%20provide%20Upstash%20credentials%20and%20cache%20settings&project-name=my-3d-gallery&repository-name=my-3d-gallery)
 
-[Live Demo](https://collekt.vercel.app) • [Features](#features) • [Getting Started](#getting-started) • [API](#api-documentation) • [Contributing](#contributing)
+[Live Demo](https://collekt.fafolab.xyz) • [Features](#features) • [Getting Started](#getting-started) • [API](#api-documentation) • [Contributing](#contributing)
 
 </div>
 
