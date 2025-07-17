@@ -485,7 +485,7 @@ Just remember to:
 
 **Built with ❤️ by [FAFO ~~lab~~](https://fafolab.xyz)**
 
-[Website](https://collekt.vercel.app) • [GitHub](https://github.com/skullzarmy/colleKT) • [Issues](https://github.com/skullzarmy/colleKT/issues) • [Discussions](https://github.com/skullzarmy/colleKT/discussions)
+[Website](https://collekt.fafolab.xyz) • [GitHub](https://github.com/skullzarmy/colleKT) • [Issues](https://github.com/skullzarmy/colleKT/issues) • [Discussions](https://github.com/skullzarmy/colleKT/discussions)
 
 _Attribution appreciated but not required_
 
