@@ -141,6 +141,17 @@ export default function HomePage() {
                         joint.
                     </div>
                     <div>
+                        {/* https://github.com/skullzarmy/colleKT - github open source link */}
+                        <a
+                            href="https://github.com/skullzarmy/colleKT"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-400 underline hover:text-white"
+                        >
+                            GitHub Repository
+                        </a>
+                    </div>
+                    <div>
                         Data provided by{" "}
                         <a
                             href="https://tzkt.io"
