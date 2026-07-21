@@ -82,6 +82,15 @@ export class CacheManager {
     private redis: Redis | null = null;
     private isConfigured: boolean;
 
+    // Circuit breaker: after repeated failures we stop hitting Redis for a cooldown,
+    // so a dead/unreachable instance (e.g. a deleted Upstash DB → ENOTFOUND) can't
+    // turn every request into a multi-second hang.
+    private consecutiveFailures = 0;
+    private circuitOpenUntil = 0;
+    private static readonly REDIS_TIMEOUT_MS = 2000;
+    private static readonly CIRCUIT_FAILURE_THRESHOLD = 2;
+    private static readonly CIRCUIT_COOLDOWN_MS = 60_000;
+
     constructor(config: Partial<CacheManagerConfig> = {}) {
         this.config = { ...DEFAULT_CACHE_CONFIG, ...config };
         this.stats = {
@@ -94,14 +103,65 @@ export class CacheManager {
             averageBuildTimeMs: 0,
         };
 
-        // Initialize Redis connection (server-side only)
-        this.isConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+        // Redis caching is opt-in: it requires CACHE_ENABLED=true AND credentials.
+        // Anything other than the literal "true" (including unset) leaves caching
+        // off entirely — no Redis client, no network calls.
+        const cacheEnabled = process.env.CACHE_ENABLED === "true";
+        this.isConfigured =
+            cacheEnabled && !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
         if (this.isConfigured) {
             this.redis = new Redis({
                 url: process.env.UPSTASH_REDIS_REST_URL!,
                 token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+                // Fail fast: don't let the client's default retry/backoff turn an
+                // unreachable host into a multi-second hang on every request.
+                retry: false,
             });
+        }
+    }
+
+    /**
+     * Whether a Redis operation may be attempted right now: caching is configured,
+     * a client exists, and the circuit breaker is not open from recent failures.
+     */
+    private canUseRedis(): boolean {
+        return this.isConfigured && this.redis !== null && Date.now() >= this.circuitOpenUntil;
+    }
+
+    /**
+     * Run a Redis operation with a hard timeout and circuit-breaker bookkeeping.
+     * After CIRCUIT_FAILURE_THRESHOLD consecutive failures the circuit opens for a
+     * cooldown, so subsequent calls short-circuit via canUseRedis() instead of
+     * repeatedly waiting on a dead host.
+     */
+    private async execRedis<T>(op: () => Promise<T>): Promise<T> {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeout = new Promise<never>((_, reject) => {
+            timer = setTimeout(
+                () => reject(new Error(`Redis operation timed out after ${CacheManager.REDIS_TIMEOUT_MS}ms`)),
+                CacheManager.REDIS_TIMEOUT_MS,
+            );
+        });
+
+        try {
+            const result = await Promise.race([op(), timeout]);
+            this.consecutiveFailures = 0; // healthy response: reset (half-open -> closed)
+            return result;
+        } catch (error) {
+            this.consecutiveFailures++;
+            if (this.consecutiveFailures >= CacheManager.CIRCUIT_FAILURE_THRESHOLD) {
+                this.circuitOpenUntil = Date.now() + CacheManager.CIRCUIT_COOLDOWN_MS;
+                this.consecutiveFailures = 0;
+                console.warn(
+                    `[CacheManager] Redis unavailable; pausing cache for ${
+                        CacheManager.CIRCUIT_COOLDOWN_MS / 1000
+                    }s`,
+                );
+            }
+            throw error;
+        } finally {
+            if (timer) clearTimeout(timer);
         }
     }
 
@@ -113,7 +173,7 @@ export class CacheManager {
 
         try {
             // Check if cache is available
-            if (!this.isConfigured || !this.redis) {
+            if (!this.canUseRedis()) {
                 this.stats.misses++;
                 this.updateHitRate();
                 return {
@@ -124,7 +184,7 @@ export class CacheManager {
             }
 
             // Attempt to get from cache - stored as Buffer if compressed
-            const cached = await this.redis.get(cacheKey);
+            const cached = await this.execRedis(() => this.redis!.get(cacheKey));
 
             if (!cached) {
                 this.stats.misses++;
@@ -192,8 +252,7 @@ export class CacheManager {
     async set<T>(cacheKey: string, data: T, ttlSeconds: number = this.config.defaultTtlSeconds): Promise<boolean> {
         try {
             // Check if cache is available
-            if (!this.isConfigured || !this.redis) {
-                console.warn("Cache not available, skipping set operation");
+            if (!this.canUseRedis()) {
                 return false;
             }
 
@@ -201,7 +260,7 @@ export class CacheManager {
             const compressionResult = await compressData(data, this.config.compression);
 
             // Store the compressed data directly in Redis
-            await this.redis.setex(cacheKey, ttlSeconds, compressionResult.data);
+            await this.execRedis(() => this.redis!.setex(cacheKey, ttlSeconds, compressionResult.data));
 
             return true;
         } catch (error) {
@@ -216,11 +275,11 @@ export class CacheManager {
      */
     async invalidate(cacheKey: string): Promise<boolean> {
         try {
-            if (!this.isConfigured || !this.redis) {
+            if (!this.canUseRedis()) {
                 return false;
             }
 
-            const result = await this.redis.del(cacheKey);
+            const result = await this.execRedis(() => this.redis!.del(cacheKey));
             return result > 0;
         } catch (error) {
             this.stats.totalErrors++;
@@ -235,19 +294,19 @@ export class CacheManager {
      */
     async invalidatePattern(pattern: string): Promise<number> {
         try {
-            if (!this.isConfigured || !this.redis) {
+            if (!this.canUseRedis()) {
                 return 0;
             }
 
             // Get all keys matching the pattern
-            const keys = await this.redis.keys(pattern);
+            const keys = await this.execRedis(() => this.redis!.keys(pattern));
 
             if (keys.length === 0) {
                 return 0;
             }
 
             // Delete all matching keys
-            const result = await this.redis.del(...keys);
+            const result = await this.execRedis(() => this.redis!.del(...keys));
             return result;
         } catch (error) {
             this.stats.totalErrors++;
@@ -316,11 +375,11 @@ export class CacheManager {
      */
     async healthCheck(): Promise<boolean> {
         try {
-            if (!this.isConfigured || !this.redis) {
+            if (!this.canUseRedis()) {
                 return false;
             }
 
-            const result = await this.redis.ping();
+            const result = await this.execRedis(() => this.redis!.ping());
             return result === "PONG";
         } catch (error) {
             console.error("Cache health check failed:", error);
