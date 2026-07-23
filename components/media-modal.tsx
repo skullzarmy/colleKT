@@ -8,7 +8,6 @@ import {
     Maximize2,
     Minimize2,
     Info,
-    Download,
     ExternalLink,
     Play,
     Pause,
@@ -270,6 +269,17 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         return finalUri;
     };
 
+    // For audio NFTs, the artifactUri is the audio file itself. The cover
+    // ("album art") lives on displayUri / thumbnailUri / image instead.
+    const getAudioCoverUri = () => {
+        const cover =
+            nft.metadata?.displayUri ||
+            nft.metadata?.thumbnailUri ||
+            nft.metadata?.image;
+        if (!cover) return null;
+        return getIPFSUrl(cover);
+    };
+
     const isHtmlContent = (uri: string, mimeType?: string) => {
         const lowerUri = uri.toLowerCase();
         const lowerMime = mimeType?.toLowerCase() || "";
@@ -396,7 +406,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         }
 
         const containerClass = `relative w-full ${
-            isFullscreen ? "h-screen" : "max-h-[70vh]"
+            isFullscreen ? "h-screen" : "h-[70vh]"
         } flex items-center justify-center bg-black rounded-lg overflow-hidden`;
 
         // Special handling for HTML content sizing
@@ -470,13 +480,43 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                     </div>
                 );
 
-            case "audio":
+            case "audio": {
+                const coverUri = getAudioCoverUri();
                 return (
                     <div className={containerClass}>
                         <div className="flex flex-col items-center p-8">
-                            <div className="flex items-center justify-center w-48 h-48 mb-6 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600">
-                                <Volume2 size={64} className="text-white" />
+                            {/* Album art with the play button overlaid in the center */}
+                            <div className="relative w-64 h-64 mb-6 overflow-hidden rounded-lg shadow-2xl group">
+                                {coverUri ? (
+                                    <img
+                                        src={coverUri}
+                                        alt="Album art"
+                                        className="absolute inset-0 object-cover w-full h-full"
+                                    />
+                                ) : (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-cyan-400 to-blue-600">
+                                        <Volume2 size={64} className="text-white" />
+                                    </div>
+                                )}
+
+                                {/* Dim overlay so the play button stays visible over any art */}
+                                <div className="absolute inset-0 transition-colors bg-black/20 group-hover:bg-black/40" />
+
+                                <button
+                                    onClick={togglePlay}
+                                    aria-label={isPlaying ? "Pause" : "Play"}
+                                    className="absolute inset-0 flex items-center justify-center"
+                                >
+                                    <span className="flex items-center justify-center text-white transition-transform rounded-full w-20 h-20 bg-black/60 hover:bg-black/80 hover:scale-105">
+                                        {isPlaying ? (
+                                            <Pause size={36} />
+                                        ) : (
+                                            <Play size={36} className="ml-1" />
+                                        )}
+                                    </span>
+                                </button>
                             </div>
+
                             <audio
                                 ref={audioRef}
                                 src={mediaUri}
@@ -505,6 +545,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                         </div>
                     </div>
                 );
+            }
 
             case "3d":
                 return (
@@ -620,17 +661,6 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                         >
                             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                         </Button>
-
-                        {mediaUri && (
-                            <Button
-                                onClick={() => window.open(mediaUri, "_blank")}
-                                variant="ghost"
-                                size="sm"
-                                className="text-white border bg-black/20 hover:bg-black/40 hover:text-white border-white/20 hover:border-white/40"
-                            >
-                                <Download size={16} />
-                            </Button>
-                        )}
 
                         <Button
                             onClick={onClose || (() => {})}
