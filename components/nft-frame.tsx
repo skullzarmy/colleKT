@@ -240,21 +240,32 @@ export default function NFTFrame({
                 const textLines = splitTextForDisplay(sanitizedName, 25);
                 const fontSize = getDynamicFontSize(sanitizedName, 0.2);
 
-                return textLines.map((line, index) => (
-                    <Text
-                        key={index}
-                        position={[0, -(frameBorderHeight / 2 + 0.3 + index * fontSize * 1.2), 0.1]}
-                        fontSize={fontSize}
-                        color={isSelected ? styleConfig.frames.selectedColor : (styleConfig.ui.isLight ? "#18181b" : "#ffffff")}
-                        anchorX="center"
-                        anchorY="top"
-                        maxWidth={Math.max(frameWidth, 2.5)}
-                        outlineWidth={0.01}
-                        outlineColor="#000000"
-                    >
-                        {line}
-                    </Text>
-                ));
+                return textLines.map((line, index) => {
+                    const formattedLine =
+                        styleConfig.typography.textTransform === "uppercase" ? line.toUpperCase() : line;
+                    return (
+                        <Text
+                            key={index}
+                            position={[0, -(frameBorderHeight / 2 + 0.3 + index * fontSize * 1.2), 0.1]}
+                            fontSize={fontSize}
+                            color={isSelected ? styleConfig.frames.selectedColor : styleConfig.typography.placardColor}
+                            anchorX="center"
+                            anchorY="top"
+                            maxWidth={Math.max(frameWidth, 2.5)}
+                            outlineWidth={0.01}
+                            outlineColor={styleConfig.ui.isLight ? "#ffffff" : "#000000"}
+                            letterSpacing={
+                                styleConfig.typography.letterSpacing === "tracking-widest"
+                                    ? 0.08
+                                    : styleConfig.typography.letterSpacing === "tracking-wide"
+                                    ? 0.04
+                                    : 0
+                            }
+                        >
+                            {formattedLine}
+                        </Text>
+                    );
+                });
             })()}
 
             {/* Improved hover info */}

@@ -46,6 +46,18 @@ export interface GalleryStyle {
         accentColor: string;
         badgeText: string;
     };
+    typography: {
+        fontFamily: string;
+        headingFont: string;
+        letterSpacing: string;
+        textTransform: "uppercase" | "none" | "capitalize";
+        titleColor: string;
+        placardColor: string;
+        accentTextColor: string;
+        panelBg: string;
+        panelBorder: string;
+        panelText: string;
+    };
 }
 
 export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
@@ -83,6 +95,18 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             accentColor: "#00bcd4",
             badgeText: "text-cyan-400 bg-cyan-950/60 border-cyan-800",
         },
+        typography: {
+            fontFamily: "font-sans",
+            headingFont: "font-sans font-medium tracking-wide",
+            letterSpacing: "tracking-wider",
+            textTransform: "none",
+            titleColor: "#f4f4f5", // Crisp museum white on dark wall
+            placardColor: "#d4d4d8", // Clean readable label
+            accentTextColor: "#00bcd4",
+            panelBg: "bg-zinc-950/85 backdrop-blur-md",
+            panelBorder: "border-zinc-800",
+            panelText: "text-zinc-100",
+        },
     },
     "museum-white": {
         id: "museum-white",
@@ -117,6 +141,18 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             isLight: true,
             accentColor: "#2563eb",
             badgeText: "text-blue-700 bg-blue-100 border-blue-300",
+        },
+        typography: {
+            fontFamily: "font-sans",
+            headingFont: "font-sans font-semibold tracking-tight",
+            letterSpacing: "tracking-tight",
+            textTransform: "none",
+            titleColor: "#18181b", // High-contrast matte black on white wall
+            placardColor: "#27272a", // Charcoal label
+            accentTextColor: "#2563eb",
+            panelBg: "bg-white/90 backdrop-blur-md shadow-lg",
+            panelBorder: "border-zinc-200",
+            panelText: "text-zinc-900",
         },
     },
     "warm-solarium": {
@@ -153,6 +189,18 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             accentColor: "#b45309",
             badgeText: "text-amber-900 bg-amber-100 border-amber-300",
         },
+        typography: {
+            fontFamily: "font-serif",
+            headingFont: "font-serif italic font-normal tracking-wide",
+            letterSpacing: "tracking-wide",
+            textTransform: "none",
+            titleColor: "#3b2a1d", // Deep espresso/bronze on linen wall
+            placardColor: "#4a3728", // Warm dark walnut label
+            accentTextColor: "#b45309",
+            panelBg: "bg-[#fcfaf6]/95 backdrop-blur-md shadow-md",
+            panelBorder: "border-[#e5ded3]",
+            panelText: "text-[#382b20]",
+        },
     },
     "minimal-spotlight": {
         id: "minimal-spotlight",
@@ -188,6 +236,18 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             accentColor: "#f59e0b",
             badgeText: "text-amber-400 bg-amber-950/60 border-amber-700",
         },
+        typography: {
+            fontFamily: "font-mono",
+            headingFont: "font-mono font-bold tracking-widest uppercase",
+            letterSpacing: "tracking-widest",
+            textTransform: "uppercase",
+            titleColor: "#f1f5f9", // Crisp white on concrete
+            placardColor: "#e2e8f0", // Slate-200 technical label
+            accentTextColor: "#f59e0b",
+            panelBg: "bg-[#17181c]/90 backdrop-blur-md",
+            panelBorder: "border-zinc-700",
+            panelText: "text-zinc-200",
+        },
     },
     "cyberpunk-neon": {
         id: "cyberpunk-neon",
@@ -222,6 +282,18 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             isLight: false,
             accentColor: "#00f0ff",
             badgeText: "text-cyan-300 bg-cyan-950/70 border-cyan-500 shadow-[0_0_12px_rgba(0,240,255,0.3)]",
+        },
+        typography: {
+            fontFamily: "font-mono",
+            headingFont: "font-mono font-black tracking-widest uppercase",
+            letterSpacing: "tracking-widest",
+            textTransform: "uppercase",
+            titleColor: "#00f0ff", // Radiant electric cyan
+            placardColor: "#38bdf8", // Sky cyan HUD label
+            accentTextColor: "#ff007f",
+            panelBg: "bg-[#080914]/90 backdrop-blur-md shadow-[0_0_20px_rgba(0,240,255,0.15)]",
+            panelBorder: "border-cyan-500/50",
+            panelText: "text-cyan-200",
         },
     },
 };

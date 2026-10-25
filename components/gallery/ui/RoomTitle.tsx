@@ -29,7 +29,7 @@ export default function RoomTitle({
     displayName,
     position,
     fontSize = 0.8,
-    color = "#00bcd4",
+    color,
     hallwayLength = 30,
     hallwayWidth = 12, // Default hallway width
 }: RoomTitleProps) {
@@ -88,9 +88,13 @@ export default function RoomTitle({
         }
     };
 
-    const titleText = getTitleText();
-    const roomText = `Room ${roomNumber + 1} of ${totalRooms}`;
-    const titleColor = galleryMetadata.isLoading ? "#888888" : (color ?? styleConfig.ui.accentColor);
+    const rawTitleText = getTitleText();
+    const titleText = styleConfig.typography.textTransform === "uppercase" ? rawTitleText.toUpperCase() : rawTitleText;
+    const roomText = styleConfig.typography.textTransform === "uppercase" 
+        ? `ROOM ${roomNumber + 1} OF ${totalRooms}` 
+        : `Room ${roomNumber + 1} of ${totalRooms}`;
+    const titleColor = galleryMetadata.isLoading ? "#888888" : (color ?? styleConfig.typography.titleColor);
+    const subtextColor = galleryMetadata.isLoading ? "#666666" : styleConfig.typography.placardColor;
 
     // Calculate dynamic font size based on text length and room width
     const calculateFontSize = (text: string, maxWidth: number, baseFontSize: number = 0.8) => {
@@ -131,7 +135,13 @@ export default function RoomTitle({
                         bevelSegments={5}
                     >
                         {titleText}
-                        <meshStandardMaterial color={titleColor} roughness={0.3} metalness={0.1} />
+                        <meshStandardMaterial
+                            color={titleColor}
+                            emissive={styleConfig.id === "cyberpunk-neon" ? titleColor : "#000000"}
+                            emissiveIntensity={styleConfig.id === "cyberpunk-neon" ? 0.6 : 0}
+                            roughness={0.4}
+                            metalness={0.2}
+                        />
                     </Text3D>
                 </Center>
             </group>
@@ -151,7 +161,13 @@ export default function RoomTitle({
                         bevelSegments={3}
                     >
                         {roomText}
-                        <meshStandardMaterial color={titleColor} roughness={0.5} metalness={0.05} />
+                        <meshStandardMaterial
+                            color={subtextColor}
+                            emissive={styleConfig.id === "cyberpunk-neon" ? subtextColor : "#000000"}
+                            emissiveIntensity={styleConfig.id === "cyberpunk-neon" ? 0.4 : 0}
+                            roughness={0.5}
+                            metalness={0.1}
+                        />
                     </Text3D>
                 </Center>
             </group>

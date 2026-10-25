@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight, MoreHorizontal, Hash, Dices } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useViewState } from "@/contexts/ViewStateContext";
 
 interface RoomNavigationProps {
     currentRoom: number;
@@ -23,6 +24,7 @@ export default function RoomNavigation({
     onNextRoom,
     onGoToRoom,
 }: RoomNavigationProps) {
+    const { styleConfig } = useViewState();
     const [isExpanded, setIsExpanded] = useState(false);
     const [jumpInput, setJumpInput] = useState("");
     const [showJumpInput, setShowJumpInput] = useState(false);
@@ -101,13 +103,13 @@ export default function RoomNavigation({
 
     return (
         <TooltipProvider>
-            <div className="fixed z-50 transform -translate-x-1/2 bottom-4 left-1/2">
+            <div className={`fixed z-50 transform -translate-x-1/2 bottom-4 left-1/2 ${styleConfig.typography.fontFamily}`}>
                 <div
                     className={`
-                        bg-black/80 backdrop-blur-md rounded-2xl border border-white/20 
-                        transition-all duration-300 ease-in-out
+                        ${styleConfig.typography.panelBg} ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}
+                        rounded-2xl border shadow-2xl transition-all duration-300 ease-in-out
                         ${isExpanded ? "px-3 py-3 sm:px-6 sm:py-4" : "px-2 py-2 sm:px-4 sm:py-3"}
-                        hover:bg-black/90 hover:border-white/30 max-w-[90vw] sm:max-w-none
+                        max-w-[90vw] sm:max-w-none
                     `}
                     onMouseEnter={() => setIsExpanded(true)}
                     onMouseLeave={() => {
@@ -142,8 +144,8 @@ export default function RoomNavigation({
                                                 onMouseLeave={handleProgressBarMouseLeave}
                                             >
                                                 <div
-                                                    className="h-full transition-all duration-300 rounded-full bg-cyan-400"
-                                                    style={{ width: `${progressPercent}%` }}
+                                                    className="h-full transition-all duration-300 rounded-full"
+                                                    style={{ width: `${progressPercent}%`, backgroundColor: styleConfig.ui.accentColor }}
                                                 />
                                             </div>
                                         </TooltipTrigger>
@@ -221,8 +223,8 @@ export default function RoomNavigation({
                                                 onMouseLeave={handleProgressBarMouseLeave}
                                             >
                                                 <div
-                                                    className="h-full transition-all duration-300 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400"
-                                                    style={{ width: `${progressPercent}%` }}
+                                                    className="h-full transition-all duration-300 rounded-full"
+                                                    style={{ width: `${progressPercent}%`, backgroundColor: styleConfig.ui.accentColor }}
                                                 />
                                                 {/* Hover indicator */}
                                                 {hoveredRoom !== null && (
