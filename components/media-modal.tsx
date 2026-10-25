@@ -199,7 +199,13 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             });
             const text = await partialResponse.text();
 
-            if (text.includes("<!DOCTYPE html") || text.includes("<html") || text.includes("fxhash")) {
+            if (
+                text.includes("<!DOCTYPE html") ||
+                text.includes("<html") ||
+                text.includes("fxhash") ||
+                text.includes("editArt") ||
+                text.includes("p5")
+            ) {
                 return "html";
             }
 
@@ -232,7 +238,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             setDetectedMediaType(null);
 
             const testUri = rawUri.startsWith("ipfs://")
-                ? `https://ipfs.fileship.xyz/${rawUri.replace("ipfs://", "")}`
+                ? `https://ipfs.fileship.xyz/${rawUri.replace("ipfs://", "").replace(/^([a-zA-Z0-9]+)\?/, "$1/?")}`
                 : rawUri;
 
             detectActualMediaType(testUri)
@@ -246,29 +252,46 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         }
     }, [nft?.id, isDetecting, detectedMediaType]);
 
-    if (!nft) return null;
+    // Aleatory & Generative detection
+    const isAleatory = Boolean(
+        nft &&
+        (nft.standard === "aleatory" ||
+            nft.standard === "aleatory-generator" ||
+            nft.metadata?.tags?.some((t) => t.toLowerCase().includes("aleatory")) ||
+            nft.contractAlias?.toLowerCase().includes("aleatory"))
+    );
 
-    // Aleatory detection
-    const isAleatory =
-        nft.standard === "aleatory" ||
-        nft.standard === "aleatory-generator" ||
-        nft.metadata?.tags?.some((t) => t.toLowerCase().includes("aleatory")) ||
-        nft.contractAlias?.toLowerCase().includes("aleatory");
+    const isEditArt = Boolean(
+        nft &&
+        (nft.metadata?.symbol?.toUpperCase() === "EDITART" ||
+            (nft as any).symbol?.toUpperCase() === "EDITART" ||
+            nft.contractAlias?.toLowerCase().includes("editart") ||
+            nft.metadata?.tags?.some((t) => t.toLowerCase().includes("editart")) ||
+            nft.metadata?.artifactUri?.toLowerCase().includes("editart") ||
+            nft.metadata?.artifactUri?.toLowerCase().includes("?m0="))
+    );
 
-    const isGenerator =
-        nft.standard === "aleatory-generator" ||
-        nft.metadata?.attributes?.some((a) => a.trait_type?.toLowerCase() === "generator");
+    const isGenerator = Boolean(
+        nft &&
+        (nft.standard === "aleatory-generator" ||
+            nft.metadata?.attributes?.some((a) => a.trait_type?.toLowerCase() === "generator") ||
+            isEditArt)
+    );
 
     const getCollectionDisplayName = () => {
+        if (!nft) return "";
         if (nft.contractAlias) return nft.contractAlias;
         return `${nft.contractAddress.slice(0, 8)}...${nft.contractAddress.slice(-4)}`;
     };
 
     const getIPFSUrl = (uri: string, preferStandardGateway = false) => {
+        if (!uri) return "";
         if (uri.startsWith("data:")) return uri;
 
         if (uri.startsWith("ipfs://")) {
-            const withoutProtocol = uri.replace("ipfs://", "");
+            let withoutProtocol = uri.replace("ipfs://", "");
+            // Handle CID followed directly by query params without trailing slash, e.g. Qm123?m0=... -> Qm123/?m0=...
+            withoutProtocol = withoutProtocol.replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
             if (preferStandardGateway) {
                 return `https://ipfs.io/ipfs/${withoutProtocol}`;
             }
@@ -278,6 +301,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     };
 
     const getRawMediaUri = () => {
+        if (!nft) return null;
         const artifact = nft.metadata?.artifactUri;
         const display = nft.metadata?.displayUri;
         const image = nft.metadata?.image;
@@ -293,10 +317,32 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         const lowerMime = mimeType?.toLowerCase() || "";
 
         if (lowerMime.includes("text/html") || lowerMime.includes("application/html")) return true;
-        if (lowerUri.includes("?fxhash=") || lowerUri.includes("&fxhash=")) return true;
-        if (lowerUri.includes(".html") || lowerUri.includes(".htm")) return true;
-        if (lowerUri.includes("fxhash.xyz") || lowerUri.includes("gateway.fxhash")) return true;
-        if (lowerUri.includes("text/html") || lowerUri.includes("html")) return true;
+        if (
+            lowerUri.includes("?fxhash=") ||
+            lowerUri.includes("&fxhash=") ||
+            lowerUri.includes(".html") ||
+            lowerUri.includes(".htm") ||
+            lowerUri.includes("fxhash.xyz") ||
+            lowerUri.includes("gateway.fxhash") ||
+            lowerUri.includes("text/html") ||
+            lowerUri.includes("html") ||
+            lowerUri.includes("?m0=") ||
+            lowerUri.includes("&m0=") ||
+            lowerUri.includes("editart") ||
+            lowerUri.includes("?seed=") ||
+            lowerUri.includes("&seed=") ||
+            lowerUri.includes("?hash=") ||
+            lowerUri.includes("&hash=")
+        ) return true;
+
+        if (
+            isEditArt ||
+            isAleatory ||
+            nft?.metadata?.tags?.some((t) => t.toLowerCase().includes("generative") || t.toLowerCase().includes("interactive"))
+        ) {
+            return true;
+        }
+
         return false;
     };
 
@@ -329,6 +375,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     };
 
     const getAudioCoverUri = () => {
+        if (!nft) return null;
         const cover = nft.metadata?.displayUri || nft.metadata?.thumbnailUri || nft.metadata?.image;
         if (!cover) return null;
         return getIPFSUrl(cover);
@@ -339,23 +386,24 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
 
     // Fetch interactive code when HTML is detected or Aleatory is flagged
     useEffect(() => {
-        if ((mediaType === "html" || isAleatory) && mediaUri && !interactiveCode && !isLoadingCode) {
-            setIsLoadingCode(true);
-            fetch(mediaUri)
-                .then((res) => res.text())
-                .then((codeText) => {
-                    setInteractiveCode(codeText);
-                    setIsLoadingCode(false);
-                    if (isAleatory) {
+        if (!nft || !mediaUri) return;
+        if ((mediaType === "html" || isAleatory) && !interactiveCode && !isLoadingCode) {
+            if (isAleatory) {
+                setIsLoadingCode(true);
+                fetch(mediaUri)
+                    .then((res) => res.text())
+                    .then((codeText) => {
+                        setInteractiveCode(codeText);
+                        setIsLoadingCode(false);
                         setUseAleatoryHarness(true);
-                    }
-                })
-                .catch((e) => {
-                    console.warn("[MediaModal] Failed to fetch interactive code text:", e);
-                    setIsLoadingCode(false);
-                });
+                    })
+                    .catch((e) => {
+                        console.warn("[MediaModal] Failed to fetch interactive code text:", e);
+                        setIsLoadingCode(false);
+                    });
+            }
         }
-    }, [mediaType, isAleatory, mediaUri, interactiveCode, isLoadingCode]);
+    }, [nft, mediaType, isAleatory, mediaUri, interactiveCode, isLoadingCode]);
 
     const togglePlay = () => {
         if (videoRef.current) {
@@ -412,6 +460,8 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     };
 
     const renderMedia = () => {
+        if (!nft) return null;
+
         if (!mediaUri) {
             return (
                 <div className="flex flex-col items-center justify-center w-full p-8 bg-zinc-900 rounded-lg h-96">
@@ -650,6 +700,8 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         }
     };
 
+    if (!nft) return null;
+
     return (
         <div
             role="dialog"
@@ -691,6 +743,11 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             {isAleatory && (
                                 <Badge className="bg-cyan-950 text-cyan-300 border border-cyan-800 text-xs">
                                     ALEATORY-001
+                                </Badge>
+                            )}
+                            {isEditArt && (
+                                <Badge className="bg-amber-950 text-amber-300 border border-amber-800 text-xs">
+                                    EDITART
                                 </Badge>
                             )}
                         </div>

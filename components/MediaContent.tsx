@@ -40,10 +40,10 @@ export default function MediaContent({
 
     // Helper function to detect if URI contains HTML content
     const isHtmlContent = (uri: string, mimeType?: string): boolean => {
-        if (mimeType?.includes("text/html")) return true;
+        if (mimeType?.includes("text/html") || mimeType?.includes("application/html")) return true;
 
         const lowerUri = uri.toLowerCase();
-        const htmlIndicators = [".html", "<html", "<!doctype"];
+        const htmlIndicators = [".html", "<html", "<!doctype", "fxhash", "editart", "?m0=", "&m0="];
         return htmlIndicators.some((indicator) => lowerUri.includes(indicator));
     };
 
@@ -273,7 +273,7 @@ export default function MediaContent({
                 // Convert IPFS URIs to gateway URLs, but leave data URIs unchanged
                 let finalUrl = mediaUrl;
                 if (mediaUrl.startsWith("ipfs://")) {
-                    const withoutProtocol = mediaUrl.replace("ipfs://", "");
+                    const withoutProtocol = mediaUrl.replace("ipfs://", "").replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
                     finalUrl = `https://ipfs.fileship.xyz/${withoutProtocol}`;
                 } else if (mediaUrl.startsWith("data:")) {
                     finalUrl = mediaUrl;

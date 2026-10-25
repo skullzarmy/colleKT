@@ -29,9 +29,11 @@ export const getImageDimensions = (url: string): Promise<{ width: number; height
 
 // Convert IPFS URL to HTTP
 export const getIPFSUrl = (uri: string): string => {
+    if (!uri) return "";
     if (uri.startsWith("ipfs://")) {
         const withoutProtocol = uri.replace("ipfs://", "");
-        return `https://ipfs.fileship.xyz/${withoutProtocol}`;
+        const normalized = withoutProtocol.replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
+        return `https://ipfs.fileship.xyz/${normalized}`;
     }
     return uri;
 };

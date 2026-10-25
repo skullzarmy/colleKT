@@ -44,8 +44,14 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
     const isHtmlContent = (uri?: string): boolean => {
         if (!uri) return false;
         const lowerUri = uri.toLowerCase();
-        const htmlIndicators = [".html", "text/html", "<html", "<!doctype"];
-        return htmlIndicators.some((indicator) => lowerUri.includes(indicator));
+        const htmlIndicators = [".html", "text/html", "<html", "<!doctype", "fxhash", "editart", "?m0=", "&m0="];
+        if (htmlIndicators.some((indicator) => lowerUri.includes(indicator))) return true;
+        if (
+            nft.metadata?.symbol?.toUpperCase() === "EDITART" ||
+            (nft as any).symbol?.toUpperCase() === "EDITART" ||
+            nft.contractAlias?.toLowerCase().includes("editart")
+        ) return true;
+        return false;
     };
 
     const hasInteractiveContent = (): boolean => {
@@ -84,7 +90,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
     const getIPFSUrl = (uri: string) => {
         if (uri.startsWith("ipfs://")) {
             // Extract CID and preserve any query parameters
-            const withoutProtocol = uri.replace("ipfs://", "");
+            const withoutProtocol = uri.replace("ipfs://", "").replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
             return `https://ipfs.fileship.xyz/${withoutProtocol}`;
         }
         return uri;

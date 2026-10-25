@@ -519,7 +519,7 @@ export default function UnifiedGallery({
                 let mediaUrl = uri;
                 if (uri.startsWith("ipfs://")) {
                     // Extract CID and preserve any query parameters
-                    const withoutProtocol = uri.replace("ipfs://", "");
+                    const withoutProtocol = uri.replace("ipfs://", "").replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
                     mediaUrl = `https://ipfs.fileship.xyz/${withoutProtocol}`;
                 }
 
