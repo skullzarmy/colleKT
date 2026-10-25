@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,6 +23,9 @@ import {
     Sparkles,
     Code,
     Coins,
+    Copy,
+    Check,
+    Image as ImageIcon,
 } from "lucide-react";
 import { UnifiedToken } from "@/lib/data/types/token-types";
 import { useWallet } from "@/contexts/WalletContext";
@@ -33,6 +36,12 @@ import {
     PLATFORM_REFERRER,
 } from "@/lib/tezos/market-service";
 import AleatoryFrame from "@/components/aleatory/AleatoryFrame";
+import {
+    fetchAleatoryCode,
+    fetchAleatorySaleInfo,
+    mintAleatoryPiece,
+    type AleatorySaleInfo,
+} from "@/lib/aleatory/client";
 import { resolveIdentity, type ResolvedIdentity } from "@/lib/tezos/identity-resolver";
 import { getIPFSUrl } from "@/lib/utils";
 
@@ -80,16 +89,31 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const [buyError, setBuyError] = useState<string | null>(null);
     const [buySuccessHash, setBuySuccessHash] = useState<string | null>(null);
 
-    // Interactive / Aleatory code runner state
+    // Interactive / Aleatory code runner & live view state
     const [interactiveCode, setInteractiveCode] = useState<string | null>(null);
     const [isLoadingCode, setIsLoadingCode] = useState(false);
     const [reloadKey, setReloadKey] = useState(0);
     const [extractedFeatures, setExtractedFeatures] = useState<Record<string, string | number | boolean> | null>(null);
+    const [viewMode, setViewMode] = useState<"live" | "static">("live");
+    const [copiedSeed, setCopiedSeed] = useState(false);
+
+    // Aleatory Generator sale & live minting state
+    const [aleatorySaleInfo, setAleatorySaleInfo] = useState<AleatorySaleInfo | null>(null);
+    const [isLoadingSaleInfo, setIsLoadingSaleInfo] = useState(false);
+    const [isMinting, setIsMinting] = useState(false);
+    const [mintError, setMintError] = useState<string | null>(null);
+    const [mintSuccessHash, setMintSuccessHash] = useState<string | null>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const currentNftIdRef = useRef<string | null>(null);
+
+    const copySeed = (seedText: string) => {
+        navigator.clipboard.writeText(seedText);
+        setCopiedSeed(true);
+        setTimeout(() => setCopiedSeed(false), 2000);
+    };
 
     // Reset states when NFT changes
     useLayoutEffect(() => {
@@ -115,6 +139,13 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             setInteractiveCode(null);
             setIsLoadingCode(false);
             setExtractedFeatures(null);
+            setViewMode("live");
+            setAleatorySaleInfo(null);
+            setIsLoadingSaleInfo(false);
+            setIsMinting(false);
+            setMintError(null);
+            setMintSuccessHash(null);
+            setCopiedSeed(false);
         }
     }, [nft?.id]);
 
@@ -428,6 +459,12 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         nft &&
         (nft.standard === "aleatory" ||
             nft.standard === "aleatory-generator" ||
+            nft.metadata?.symbol?.toUpperCase() === "ALEA" ||
+            (nft as any).symbol?.toUpperCase() === "ALEA" ||
+            Boolean((nft.metadata as any)?.aleaSeed) ||
+            Boolean((nft.metadata as any)?.aleaCode) ||
+            Boolean((nft.metadata as any)?.aleaParams) ||
+            Boolean((nft.metadata as any)?.aleaCodeHash) ||
             nft.metadata?.tags?.some((t) => t.toLowerCase().includes("aleatory")) ||
             nft.contractAlias?.toLowerCase().includes("aleatory"))
     );
@@ -445,18 +482,63 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const isGenerator = Boolean(
         nft &&
         (nft.standard === "aleatory-generator" ||
-            nft.metadata?.attributes?.some((a) => a.trait_type?.toLowerCase() === "generator"))
+            nft.metadata?.attributes?.some(
+                (a: any) => (a.name || a.trait_type || a.attribute?.name)?.toLowerCase() === "generator"
+            ) ||
+            (nft.metadata as any)?.type?.toLowerCase() === "generator" ||
+            (!nft.tokenId && nft.contractAddress))
     );
 
-    const getCollectionDisplayName = () => {
+    // Extract on-chain Aleatory Seed
+    const aleaSeed = useMemo(() => {
         if (!nft) return "";
-        if (collectionDetails?.name) return collectionDetails.name;
-        if (nft.contractAlias) return nft.contractAlias;
-        return `${nft.contractAddress.slice(0, 8)}...${nft.contractAddress.slice(-4)}`;
+        return (
+            ((nft.metadata as any)?.aleaSeed as string) ||
+            (nft.metadata?.attributes?.find((a: any) => {
+                const n = (a.name || a.trait_type || a.attribute?.name || "").toLowerCase();
+                return n === "seed" || n === "aleaseed" || n === "alea_seed";
+            })?.value as string) ||
+            ""
+        );
+    }, [nft]);
+
+    // Parse on-chain Aleatory Parameters
+    const parsedAleaParamsRecord = useMemo((): Record<string, unknown> => {
+        if (!nft) return {};
+        const rawParams = (nft.metadata as any)?.aleaParams;
+        if (!rawParams) return {};
+        if (typeof rawParams === "string") {
+            try {
+                return JSON.parse(rawParams);
+            } catch {
+                return {};
+            }
+        }
+        if (typeof rawParams === "object" && rawParams !== null) {
+            return rawParams as Record<string, unknown>;
+        }
+        return {};
+    }, [nft]);
+
+    // Humanize snake_case or kebab-case keys for presentation
+    const humanizeKey = (key: string): string => {
+        return key
+            .replace(/_/g, " ")
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (char) => char.toUpperCase());
     };
 
+    // Formatted on-chain Aleatory Parameters
+    const aleaParams = useMemo(() => {
+        return Object.entries(parsedAleaParamsRecord).map(([k, v]) => ({
+            key: k,
+            label: humanizeKey(k),
+            value: typeof v === "object" ? JSON.stringify(v) : String(v),
+        }));
+    }, [parsedAleaParamsRecord]);
+
     // Parse generative parameters from artifactUri (e.g. ?m0=0.443&m1=0.259... or ?seed=... or ?hash=...)
-    const getGenerativeParams = (): { name: string; value: string }[] => {
+    const generativeParams = useMemo((): { name: string; value: string }[] => {
         if (!nft) return [];
         const rawUri = nft.metadata?.artifactUri || "";
         const qIndex = rawUri.indexOf("?");
@@ -471,9 +553,91 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         });
 
         return list;
+    }, [nft]);
+
+    // Clean categorical attributes (with duplicate parameters & title filtered out)
+    const cleanAttributes = useMemo(() => {
+        if (!nft?.metadata?.attributes || !Array.isArray(nft.metadata.attributes)) return [];
+
+        const aleaKeys = new Set(aleaParams.map((p) => p.key.toLowerCase().trim()));
+        const list: { label: string; value: string }[] = [];
+
+        for (const attr of nft.metadata.attributes as any[]) {
+            if (!attr) continue;
+            const rawName = attr.name || attr.trait_type || attr.attribute?.name || "";
+            const rawValue = attr.value !== undefined ? attr.value : attr.attribute?.value;
+
+            if (rawValue === undefined || rawValue === null) continue;
+
+            const nameStr = String(rawName).trim();
+            const nameLower = nameStr.toLowerCase();
+
+            // Skip title/name attribute that repeats collection/token title
+            if (nameLower === "title" || nameLower === "name") continue;
+
+            // Skip seed attribute (already displayed under Generative Parameters)
+            if (nameLower === "seed" || nameLower === "aleaseed" || nameLower === "alea_seed") continue;
+
+            // Skip if this matches an aleaParam key (e.g. tectonic_regime, relic_scale, etc.)
+            const normalizedKey = nameLower.replace(/\s+/g, "_");
+            if (aleaKeys.has(nameLower) || aleaKeys.has(normalizedKey)) {
+                continue;
+            }
+
+            const label = nameStr ? humanizeKey(nameStr) : "Trait";
+            list.push({
+                label,
+                value: String(rawValue),
+            });
+        }
+
+        return list;
+    }, [nft, aleaParams]);
+
+    // Handle Mint for Aleatory Generator
+    const handleMint = async () => {
+        if (!nft?.contractAddress || !aleatorySaleInfo) return;
+
+        setMintError(null);
+        setMintSuccessHash(null);
+
+        try {
+            let activeClient = client;
+            if (!activeClient || !isConnected) {
+                await connect();
+                activeClient = await getClient();
+            }
+
+            if (!activeClient) {
+                throw new Error("Could not initialize wallet client");
+            }
+
+            setIsMinting(true);
+            const { hash } = await mintAleatoryPiece(
+                activeClient,
+                nft.contractAddress,
+                aleatorySaleInfo.priceMutez,
+                "{}"
+            );
+
+            setMintSuccessHash(hash);
+            fetchAleatorySaleInfo(nft.contractAddress).then((info) => {
+                if (info) setAleatorySaleInfo(info);
+            });
+        } catch (err: any) {
+            console.error("[MediaModal] Mint error:", err);
+            setMintError(err?.message || "Failed to mint edition");
+        } finally {
+            setIsMinting(false);
+        }
     };
 
-    const generativeParams = getGenerativeParams();
+    const getCollectionDisplayName = () => {
+        if (!nft) return "";
+        if (collectionDetails?.name) return collectionDetails.name;
+        if (nft.contractAlias) return nft.contractAlias;
+        return `${nft.contractAddress.slice(0, 8)}...${nft.contractAddress.slice(-4)}`;
+    };
 
     const getRawMediaUri = () => {
         if (!nft) return null;
@@ -557,30 +721,60 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const mediaUri = getBestMediaUri();
     const mediaType = detectedMediaType || (isDetecting ? "image" : getMediaType());
 
-    // Fetch interactive code when HTML / Generative is detected
+    // Fetch interactive code & Aleatory live code/sale status
     useEffect(() => {
-        if (!nft || !mediaUri) return;
-        if ((mediaType === "html" || isAleatory || isEditArt) && !interactiveCode && !isLoadingCode) {
+        if (!nft) return;
+        let isMounted = true;
+
+        if (isAleatory) {
+            setIsLoadingCode(true);
+            fetchAleatoryCode(nft.contractAddress)
+                .then((codeText) => {
+                    if (isMounted) {
+                        if (codeText) {
+                            setInteractiveCode(codeText);
+                        }
+                        setIsLoadingCode(false);
+                    }
+                })
+                .catch((e) => {
+                    console.warn("[MediaModal] Failed to fetch Aleatory code:", e);
+                    if (isMounted) setIsLoadingCode(false);
+                });
+
+            // Fetch live generator sale & mint status
+            setIsLoadingSaleInfo(true);
+            fetchAleatorySaleInfo(nft.contractAddress)
+                .then((info) => {
+                    if (isMounted) {
+                        setAleatorySaleInfo(info);
+                        setIsLoadingSaleInfo(false);
+                    }
+                })
+                .catch((e) => {
+                    console.warn("[MediaModal] Failed to fetch sale info:", e);
+                    if (isMounted) setIsLoadingSaleInfo(false);
+                });
+        } else if ((mediaType === "html" || isEditArt) && mediaUri && !interactiveCode && !isLoadingCode) {
             setIsLoadingCode(true);
             fetch(mediaUri)
                 .then((res) => res.text())
                 .then((codeText) => {
+                    if (!isMounted) return;
                     const qIndex = mediaUri.indexOf("?");
                     const queryString = qIndex !== -1 ? mediaUri.slice(qIndex) : "";
                     const baseUri = mediaUri.split("?")[0].replace(/\/?$/, "/");
 
                     let prepared = codeText;
 
-                    // Strip any restrictive CSP meta tags and Cloudflare analytics beacon injections
+                    // Strip restrictive CSP meta tags and analytics scripts
                     prepared = prepared.replace(/<meta[^>]*http-equiv=["']?Content-Security-Policy["']?[^>]*>/gi, "");
                     prepared = prepared.replace(/<script[^>]*static\.cloudflareinsights\.com[^>]*><\/script>/gi, "");
 
-                    // Inject <base href="..."> so all relative paths (p5, textures, sounds) resolve from fileship
                     if (!prepared.includes("<base ") && !prepared.includes("<base>")) {
                         prepared = prepared.replace("<head>", `<head><base href="${baseUri}">`);
                     }
 
-                    // Forward query string into window.location.search for srcDoc execution
                     if (queryString) {
                         prepared = prepared.replace(
                             /window\.location\.search/g,
@@ -593,10 +787,14 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                 })
                 .catch((e) => {
                     console.warn("[MediaModal] Failed to fetch interactive code text:", e);
-                    setIsLoadingCode(false);
+                    if (isMounted) setIsLoadingCode(false);
                 });
         }
-    }, [nft, mediaType, isAleatory, isEditArt, mediaUri, interactiveCode, isLoadingCode]);
+
+        return () => {
+            isMounted = false;
+        };
+    }, [nft?.id, nft?.contractAddress, isAleatory, mediaType, isEditArt, mediaUri]);
 
     const togglePlay = () => {
         if (videoRef.current) {
@@ -695,7 +893,9 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         } flex items-center justify-center bg-black rounded-lg overflow-hidden`;
 
         // Handle HTML / Interactive Content with Aleatory Frame Option
-        if (mediaType === "html" || isAleatory || isEditArt) {
+        const shouldRenderInteractive = (isAleatory && viewMode === "live") || (!isAleatory && (mediaType === "html" || isEditArt));
+
+        if (shouldRenderInteractive) {
             const htmlContainerClass = `relative w-full ${
                 isFullscreen ? "h-screen p-0" : "h-[70vh] p-2"
             } flex items-center justify-center bg-zinc-950 rounded-lg overflow-hidden`;
@@ -707,24 +907,24 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             <AleatoryFrame
                                 key={`aleatory-${nft.id}-${reloadKey}`}
                                 code={interactiveCode}
-                                seed={
-                                    (nft.metadata?.attributes?.find((a) => a.trait_type?.toLowerCase() === "seed")
-                                        ?.value as string) || `0x${nft.tokenId}`
-                                }
+                                seed={aleaSeed || `0x${nft.tokenId}`}
+                                params={parsedAleaParamsRecord}
                                 title={nft.metadata?.name || `Token #${nft.tokenId}`}
                                 onFeaturesReady={(features) => setExtractedFeatures(features)}
                             />
                         ) : isLoadingCode ? (
                             <div className="w-full h-full flex flex-col items-center justify-center text-white bg-zinc-950">
                                 <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mb-3" />
-                                <p className="text-xs text-zinc-300 font-mono">Loading interactive artwork...</p>
+                                <p className="text-xs text-zinc-300 font-mono">
+                                    {isAleatory ? "Decompressing on-chain $alea generative code..." : "Loading interactive artwork..."}
+                                </p>
                             </div>
                         ) : (
                             <iframe
                                 ref={iframeRef}
                                 key={`iframe-${nft.id}-${reloadKey}`}
                                 srcDoc={interactiveCode || undefined}
-                                src={!interactiveCode ? mediaUri : undefined}
+                                src={!interactiveCode ? mediaUri || undefined : undefined}
                                 className="w-full h-full border-0"
                                 sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                                 title={`Interactive content for ${nft.metadata?.name || nft.tokenId}`}
@@ -732,8 +932,41 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             />
                         )}
 
-                        {/* Top controls: Reload & Fullscreen */}
+                        {/* Top controls: Live/Static Toggle, Reload, Fullscreen */}
                         <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
+                            {isAleatory && (
+                                <div className="flex items-center gap-1 bg-zinc-900/95 p-1 rounded-lg border border-zinc-700 shadow-lg">
+                                    <Button
+                                        onClick={() => setViewMode("live")}
+                                        size="sm"
+                                        variant="ghost"
+                                        aria-pressed={viewMode === "live"}
+                                        className={
+                                            viewMode === "live"
+                                                ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs h-8 px-2.5 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                                : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                        }
+                                    >
+                                        <Sparkles size={13} className="mr-1.5 text-cyan-300" />
+                                        Live Render
+                                    </Button>
+                                    <Button
+                                        onClick={() => setViewMode("static")}
+                                        size="sm"
+                                        variant="ghost"
+                                        aria-pressed={viewMode === "static"}
+                                        className={
+                                            viewMode === "static"
+                                                ? "bg-zinc-700 hover:bg-zinc-600 text-white font-medium text-xs h-8 px-2.5 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                                : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                        }
+                                    >
+                                        <ImageIcon size={13} className="mr-1.5 text-zinc-400" />
+                                        Static Preview
+                                    </Button>
+                                </div>
+                            )}
+
                             <Button
                                 onClick={handleReloadInteractive}
                                 size="sm"
@@ -891,6 +1124,45 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             className="object-contain max-w-full max-h-full"
                             style={{ transform: `scale(${zoom})` }}
                         />
+
+                        {/* Top controls: Live/Static Toggle for Aleatory tokens */}
+                        {isAleatory && (
+                            <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
+                                <div className="flex items-center gap-1 bg-zinc-900/95 p-1 rounded-lg border border-zinc-700 shadow-lg">
+                                    <Button
+                                        onClick={() => setViewMode("live")}
+                                        size="sm"
+                                        variant="ghost"
+                                        aria-pressed={viewMode === "live"}
+                                        className="text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                    >
+                                        <Sparkles size={13} className="mr-1.5 text-cyan-300" />
+                                        Live Render
+                                    </Button>
+                                    <Button
+                                        onClick={() => setViewMode("static")}
+                                        size="sm"
+                                        variant="ghost"
+                                        aria-pressed={viewMode === "static"}
+                                        className="bg-zinc-700 hover:bg-zinc-600 text-white font-medium text-xs h-8 px-2.5 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                    >
+                                        <ImageIcon size={13} className="mr-1.5 text-zinc-400" />
+                                        Static Preview
+                                    </Button>
+                                </div>
+                                <Button
+                                    onClick={toggleFullscreen}
+                                    size="sm"
+                                    variant="secondary"
+                                    aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                                    title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                                    className="text-white hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700 min-h-[36px] min-w-[36px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                >
+                                    {isFullscreen ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
+                                </Button>
+                            </div>
+                        )}
+
                         <div className="absolute flex gap-2 bottom-4 left-4">
                             <Button
                                 onClick={handleZoomIn}
@@ -1122,21 +1394,124 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     )}
                                 </div>
 
-                                {/* Aleatory Platform Integration Badge & Controls */}
+                                {/* Aleatory Platform Integration Badge & Live Minting */}
                                 {isAleatory && (
-                                    <div className="p-4 rounded-lg bg-zinc-900/80 border border-cyan-900/50 space-y-3">
+                                    <div className="p-4 rounded-lg bg-zinc-900/90 border border-cyan-900/50 space-y-3.5">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5 text-sm font-semibold text-cyan-300">
                                                 <Sparkles size={16} className="text-cyan-400" />
-                                                <span>ALEATORY-001 Standard</span>
+                                                <span>ALEATORY Standard</span>
                                             </div>
-                                            <Badge variant="outline" className="text-cyan-300 border-cyan-800 text-[10px]">
-                                                {isGenerator ? "GENERATOR" : "PIECE"}
-                                            </Badge>
+                                            <div className="flex items-center gap-1.5">
+                                                {aleatorySaleInfo?.isMinting && (
+                                                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                                        MINTING LIVE
+                                                    </span>
+                                                )}
+                                                <Badge variant="outline" className="text-cyan-300 border-cyan-800 text-[10px]">
+                                                    {isGenerator ? "GENERATOR" : "PIECE"}
+                                                </Badge>
+                                            </div>
                                         </div>
+
                                         <p className="text-xs text-zinc-300 leading-relaxed">
                                             Deterministic on-chain generative artwork running on Tezos.
                                         </p>
+
+                                        {/* Live Minting Dialog / Box */}
+                                        {aleatorySaleInfo && (
+                                            <div className="p-3 bg-zinc-950/80 rounded border border-cyan-900/60 space-y-2.5">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-zinc-400">Mint Price:</span>
+                                                    <span className="font-semibold text-cyan-300 text-sm">
+                                                        {aleatorySaleInfo.priceTez} XTZ
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-zinc-400">Editions Minted:</span>
+                                                    <span className="font-mono text-zinc-200">
+                                                        {aleatorySaleInfo.mintedCount} / {aleatorySaleInfo.editionSize > 0 ? aleatorySaleInfo.editionSize : "Open"}
+                                                    </span>
+                                                </div>
+
+                                                {/* Progress bar */}
+                                                {aleatorySaleInfo.editionSize > 0 && (
+                                                    <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="bg-cyan-500 h-full rounded-full transition-all"
+                                                            style={{
+                                                                width: `${Math.min(
+                                                                    100,
+                                                                    (aleatorySaleInfo.mintedCount / aleatorySaleInfo.editionSize) * 100
+                                                                )}%`,
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Mint Error Feedback */}
+                                                {mintError && (
+                                                    <div className="p-2.5 bg-red-950/80 border border-red-800 text-red-200 rounded text-xs flex items-start gap-2">
+                                                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                                                        <span className="break-words">{mintError}</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Mint Success Feedback */}
+                                                {mintSuccessHash && (
+                                                    <div className="p-2.5 bg-green-950/80 border border-green-800 text-green-200 rounded text-xs space-y-1">
+                                                        <div className="flex items-center gap-1.5 font-semibold text-green-300">
+                                                            <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                                            <span>Edition Minted Successfully!</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-green-200/90 break-all select-all font-mono">
+                                                            Op: {mintSuccessHash}
+                                                        </p>
+                                                        <a
+                                                            href={`https://tzkt.io/${mintSuccessHash}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center text-[11px] text-cyan-300 hover:underline pt-0.5"
+                                                        >
+                                                            <ExternalLink size={11} className="mr-1" />
+                                                            View operation on TzKT
+                                                        </a>
+                                                    </div>
+                                                )}
+
+                                                {/* Mint Button */}
+                                                {aleatorySaleInfo.isMinting ? (
+                                                    <Button
+                                                        onClick={handleMint}
+                                                        disabled={isMinting}
+                                                        className="w-full min-h-[44px] bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold text-sm shadow-md focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                                    >
+                                                        {isMinting ? (
+                                                            <>
+                                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                Minting Edition...
+                                                            </>
+                                                        ) : isConnected ? (
+                                                            <>
+                                                                <Coins className="w-4 h-4 mr-2" />
+                                                                Mint Edition ({aleatorySaleInfo.priceTez} XTZ)
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Coins className="w-4 h-4 mr-2" />
+                                                                Connect Wallet to Mint ({aleatorySaleInfo.priceTez} XTZ)
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                ) : (
+                                                    <div className="text-center py-1 text-xs text-zinc-400 italic">
+                                                        {aleatorySaleInfo.isPaused ? "Minting is currently paused." : "Generator is sold out."}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         <div className="flex flex-col gap-2 pt-1">
                                             {isGenerator ? (
                                                 <Button
@@ -1325,30 +1700,93 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     )}
                                 </div>
 
-                                {/* Attributes & Generative Parameters */}
-                                {((nft.metadata?.attributes && nft.metadata.attributes.length > 0) || generativeParams.length > 0) && (
+                                {/* Section 1: Standard Categorical Attributes */}
+                                {cleanAttributes.length > 0 && (
                                     <div className="space-y-3">
-                                        <h4 className="text-sm font-semibold text-zinc-200 flex items-center justify-between">
-                                            <span>Attributes & Parameters</span>
-                                            {isEditArt && (
-                                                <span className="text-[10px] font-mono text-amber-300 uppercase">
-                                                    EditArt Variation
-                                                </span>
-                                            )}
-                                        </h4>
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+                                                <span>Attributes</span>
+                                                <span className="text-xs font-normal text-zinc-400">({cleanAttributes.length})</span>
+                                            </h4>
+                                        </div>
                                         <div className="grid grid-cols-2 gap-2">
-                                            {/* Standard attributes */}
-                                            {(nft.metadata?.attributes || []).map((attr, index) => (
+                                            {cleanAttributes.map((attr, index) => (
                                                 <div key={`attr-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-zinc-800">
-                                                    <p className="text-[10px] uppercase font-mono text-zinc-400 truncate">{attr.trait_type}</p>
-                                                    <p className="text-xs font-semibold text-zinc-100 truncate">{String(attr.value)}</p>
+                                                    <p className="text-[10px] uppercase font-mono text-zinc-400 truncate font-semibold">
+                                                        {attr.label}
+                                                    </p>
+                                                    <p className="text-xs font-semibold text-zinc-100 truncate mt-0.5" title={attr.value}>
+                                                        {attr.value}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Section 2: Generative Parameters (Aleatory / URL params / Seed) */}
+                                {(aleaParams.length > 0 || generativeParams.length > 0 || Boolean(aleaSeed)) && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+                                                <Sparkles size={14} className="text-cyan-400" />
+                                                <span>Generative Parameters</span>
+                                                {isAleatory && (
+                                                    <Badge variant="outline" className="ml-1 text-[10px] text-cyan-300 border-cyan-800 bg-cyan-950/40">
+                                                        ALEATORY
+                                                    </Badge>
+                                                )}
+                                                {isEditArt && (
+                                                    <Badge variant="outline" className="ml-1 text-[10px] text-amber-300 border-amber-800 bg-amber-950/40">
+                                                        EDITART
+                                                    </Badge>
+                                                )}
+                                            </h4>
+                                        </div>
+
+                                        {/* On-chain Aleatory Seed display if available */}
+                                        {aleaSeed && (
+                                            <div className="p-2.5 bg-cyan-950/20 rounded border border-cyan-800/40 flex items-center justify-between">
+                                                <div className="min-w-0 pr-2">
+                                                    <p className="text-[10px] uppercase font-mono text-cyan-400/90 font-semibold">Aleatory Seed</p>
+                                                    <p className="text-xs font-mono font-semibold text-zinc-100 truncate mt-0.5 select-all" title={aleaSeed}>
+                                                        {aleaSeed}
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => copySeed(aleaSeed)}
+                                                    className="h-8 px-2 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0"
+                                                    title="Copy seed"
+                                                    aria-label="Copy aleatory seed"
+                                                >
+                                                    {copiedSeed ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+                                                </Button>
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {/* Aleatory on-chain parameters */}
+                                            {aleaParams.map((param, index) => (
+                                                <div key={`alea-param-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-cyan-900/40">
+                                                    <p className="text-[10px] uppercase font-mono text-cyan-400/90 truncate font-semibold">
+                                                        {param.label}
+                                                    </p>
+                                                    <p className="text-xs font-mono font-semibold text-white truncate mt-0.5" title={param.value}>
+                                                        {param.value}
+                                                    </p>
                                                 </div>
                                             ))}
                                             {/* Generative URL parameters (e.g. m0, m1, etc.) */}
                                             {generativeParams.map((param, index) => (
                                                 <div key={`param-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-amber-900/40">
-                                                    <p className="text-[10px] uppercase font-mono text-amber-400/90 truncate">{param.name}</p>
-                                                    <p className="text-xs font-mono font-semibold text-white truncate">{param.value}</p>
+                                                    <p className="text-[10px] uppercase font-mono text-amber-400/90 truncate font-semibold">
+                                                        {param.name}
+                                                    </p>
+                                                    <p className="text-xs font-mono font-semibold text-white truncate mt-0.5" title={param.value}>
+                                                        {param.value}
+                                                    </p>
                                                 </div>
                                             ))}
                                         </div>
