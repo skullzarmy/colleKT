@@ -90,6 +90,65 @@ export default function GalleryWalls({
                 <planeGeometry args={[hallwayWidth, wallHeight]} />
                 <meshStandardMaterial color={wallColor} roughness={0.8} />
             </mesh>
+
+            {/* Architectural Baseboards & Neon Accent Runners */}
+            {styleConfig.id === "cyberpunk-neon" ? (
+                <>
+                    {/* West (Left) Wall Floor Neon Runner - Electric Cyan */}
+                    <mesh position={[-hallwayWidth + 0.05, 0.05, hallwayLength / 2]}>
+                        <boxGeometry args={[0.08, 0.08, hallwayLength]} />
+                        <meshBasicMaterial color="#00f0ff" />
+                    </mesh>
+                    <pointLight
+                        position={[-hallwayWidth + 1, 0.3, hallwayLength / 2]}
+                        color="#00f0ff"
+                        intensity={0.4}
+                        distance={hallwayWidth}
+                    />
+
+                    {/* East (Right) Wall Floor Neon Runner - Hot Magenta */}
+                    <mesh position={[hallwayWidth - 0.05, 0.05, hallwayLength / 2]}>
+                        <boxGeometry args={[0.08, 0.08, hallwayLength]} />
+                        <meshBasicMaterial color="#ff007f" />
+                    </mesh>
+                    <pointLight
+                        position={[hallwayWidth - 1, 0.3, hallwayLength / 2]}
+                        color="#ff007f"
+                        intensity={0.4}
+                        distance={hallwayWidth}
+                    />
+
+                    {/* Ceiling Neon Runners */}
+                    <mesh position={[-hallwayWidth + 0.05, wallHeight - 0.04, hallwayLength / 2]}>
+                        <boxGeometry args={[0.06, 0.06, hallwayLength]} />
+                        <meshBasicMaterial color="#00f0ff" />
+                    </mesh>
+                    <mesh position={[hallwayWidth - 0.05, wallHeight - 0.04, hallwayLength / 2]}>
+                        <boxGeometry args={[0.06, 0.06, hallwayLength]} />
+                        <meshBasicMaterial color="#ff007f" />
+                    </mesh>
+                </>
+            ) : (
+                <>
+                    {/* Architectural Baseboard Moldings */}
+                    <mesh position={[-hallwayWidth + 0.03, 0.08, hallwayLength / 2]}>
+                        <boxGeometry args={[0.06, 0.16, hallwayLength]} />
+                        <meshStandardMaterial
+                            color={styleConfig.door.frameColor}
+                            roughness={0.7}
+                            metalness={0.1}
+                        />
+                    </mesh>
+                    <mesh position={[hallwayWidth - 0.03, 0.08, hallwayLength / 2]}>
+                        <boxGeometry args={[0.06, 0.16, hallwayLength]} />
+                        <meshStandardMaterial
+                            color={styleConfig.door.frameColor}
+                            roughness={0.7}
+                            metalness={0.1}
+                        />
+                    </mesh>
+                </>
+            )}
         </>
     );
 }

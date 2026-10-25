@@ -202,6 +202,18 @@ export default function NFTFrame({
                             ? styleConfig.frames.hoverColor
                             : styleConfig.frames.borderColor
                     }
+                    emissive={
+                        isSelected
+                            ? styleConfig.frames.selectedColor
+                            : hovered
+                            ? styleConfig.frames.hoverColor
+                            : styleConfig.id === "cyberpunk-neon"
+                            ? styleConfig.frames.borderColor
+                            : "#000000"
+                    }
+                    emissiveIntensity={
+                        isSelected ? 0.6 : hovered ? 0.35 : styleConfig.id === "cyberpunk-neon" ? 0.2 : 0
+                    }
                     roughness={styleConfig.frames.roughness}
                     metalness={styleConfig.frames.metalness}
                 />
@@ -233,7 +245,7 @@ export default function NFTFrame({
                         key={index}
                         position={[0, -(frameBorderHeight / 2 + 0.3 + index * fontSize * 1.2), 0.1]}
                         fontSize={fontSize}
-                        color={isSelected ? "#00bcd4" : "#ffffff"}
+                        color={isSelected ? styleConfig.frames.selectedColor : (styleConfig.ui.isLight ? "#18181b" : "#ffffff")}
                         anchorX="center"
                         anchorY="top"
                         maxWidth={Math.max(frameWidth, 2.5)}
@@ -262,7 +274,7 @@ export default function NFTFrame({
                     angle={0.3}
                     penumbra={0.5}
                     intensity={2}
-                    color="#00bcd4"
+                    color={styleConfig.frames.selectedColor}
                 />
             )}
         </group>

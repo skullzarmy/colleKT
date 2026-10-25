@@ -94,22 +94,46 @@ export default function Door({ position, rotation, label, onClick, disabled }: D
             <group position={[0, 0, 0]}>
                 {/* Left Frame */}
                 <Box args={[0.15, 4.2, 0.3]} position={[-1.3, 0, 0]}>
-                    <meshStandardMaterial color="#654321" roughness={0.6} metalness={0.1} />
+                    <meshStandardMaterial
+                        color={styleConfig.door.frameColor}
+                        emissive={styleConfig.id === "cyberpunk-neon" ? styleConfig.door.portalColor : "#000000"}
+                        emissiveIntensity={styleConfig.id === "cyberpunk-neon" ? 0.35 : 0}
+                        roughness={0.5}
+                        metalness={0.4}
+                    />
                 </Box>
 
                 {/* Right Frame */}
                 <Box args={[0.15, 4.2, 0.3]} position={[1.3, 0, 0]}>
-                    <meshStandardMaterial color="#654321" roughness={0.6} metalness={0.1} />
+                    <meshStandardMaterial
+                        color={styleConfig.door.frameColor}
+                        emissive={styleConfig.id === "cyberpunk-neon" ? styleConfig.door.portalColor : "#000000"}
+                        emissiveIntensity={styleConfig.id === "cyberpunk-neon" ? 0.35 : 0}
+                        roughness={0.5}
+                        metalness={0.4}
+                    />
                 </Box>
 
                 {/* Top Frame */}
                 <Box args={[2.6, 0.15, 0.3]} position={[0, 2.1, 0]}>
-                    <meshStandardMaterial color="#654321" roughness={0.6} metalness={0.1} />
+                    <meshStandardMaterial
+                        color={styleConfig.door.frameColor}
+                        emissive={styleConfig.id === "cyberpunk-neon" ? styleConfig.door.portalColor : "#000000"}
+                        emissiveIntensity={styleConfig.id === "cyberpunk-neon" ? 0.35 : 0}
+                        roughness={0.5}
+                        metalness={0.4}
+                    />
                 </Box>
 
                 {/* Door Threshold */}
                 <Box args={[2.6, 0.1, 0.3]} position={[0, -2.1, 0]}>
-                    <meshStandardMaterial color="#4a3c28" roughness={0.8} metalness={0.05} />
+                    <meshStandardMaterial
+                        color={styleConfig.door.frameColor}
+                        emissive={styleConfig.id === "cyberpunk-neon" ? styleConfig.door.portalColor : "#000000"}
+                        emissiveIntensity={styleConfig.id === "cyberpunk-neon" ? 0.2 : 0}
+                        roughness={0.6}
+                        metalness={0.3}
+                    />
                 </Box>
             </group>
 
@@ -117,16 +141,26 @@ export default function Door({ position, rotation, label, onClick, disabled }: D
             <group ref={doorRef} position={[-1.2, 0, -0.05]} rotation={[0, doorOpenAngle, 0]}>
                 {/* Main Door Panel */}
                 <Box args={[0.08, 3.8, 2.2]} position={[0, 0, 1.1]}>
-                    <meshStandardMaterial color={disabled ? "#4a4a4a" : "#6b4423"} roughness={0.7} metalness={0.05} />
+                    <meshStandardMaterial
+                        color={disabled ? "#2d2d30" : styleConfig.door.frameColor}
+                        roughness={0.6}
+                        metalness={0.3}
+                    />
                 </Box>
                 {/* Door Panel Details */}
                 {/* Upper Panel Inset */}
                 <Box args={[0.02, 1.5, 0.8]} position={[0.05, 0.8, 1.1]}>
-                    <meshStandardMaterial color="#5a3a1a" roughness={0.8} />
+                    <meshStandardMaterial
+                        color={disabled ? "#222225" : styleConfig.walls.floorColor}
+                        roughness={0.7}
+                    />
                 </Box>
                 {/* Lower Panel Inset */}
                 <Box args={[0.02, 1.5, 0.8]} position={[0.05, -0.8, 1.1]}>
-                    <meshStandardMaterial color="#5a3a1a" roughness={0.8} />
+                    <meshStandardMaterial
+                        color={disabled ? "#222225" : styleConfig.walls.floorColor}
+                        roughness={0.7}
+                    />
                 </Box>
                 {/* Door Knob - Inside */}
                 <Sphere args={[0.08]} position={[0.12, 0, 1.8]}>
@@ -189,7 +223,7 @@ export default function Door({ position, rotation, label, onClick, disabled }: D
                 <Text
                     position={[0, 0, 0.1]}
                     fontSize={0.6}
-                    color="#00ff88"
+                    color={styleConfig.door.portalColor}
                     anchorX="center"
                     anchorY="middle"
                     fillOpacity={1}
@@ -198,15 +232,15 @@ export default function Door({ position, rotation, label, onClick, disabled }: D
                 >
                     {label}
                     <meshStandardMaterial
-                        color="#00ff88"
-                        emissive="#00ff88"
+                        color={styleConfig.door.portalColor}
+                        emissive={styleConfig.door.portalColor}
                         emissiveIntensity={0.6}
                         toneMapped={false}
                     />
                 </Text>
 
                 {/* Soft glow from sign */}
-                <pointLight position={[0, 0, 0.15]} intensity={1.2} color="#00ff88" distance={8} decay={2} />
+                <pointLight position={[0, 0, 0.15]} intensity={1.2} color={styleConfig.door.portalColor} distance={8} decay={2} />
             </group>
 
             {/* Soft ambient lighting from doorway */}

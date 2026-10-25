@@ -191,37 +191,37 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
     },
     "cyberpunk-neon": {
         id: "cyberpunk-neon",
-        name: "Neon Noir",
-        description: "Inky midnight obsidian void with electric cyan architectural accents and high-contrast art illumination",
-        swatchColor: "#090a0f",
+        name: "Cyberpunk Neon",
+        description: "Noir midnight corridor with dual electric-cyan & hot-magenta neon runners, atmospheric rim lights, and glowing portals",
+        swatchColor: "#070810",
         walls: {
-            wallColor: "#090a0f", // Inky midnight obsidian
-            floorColor: "#050508", // Deep matte black floor
-            ceilingColor: "#030305",
-            roughness: 0.9,
-            metalness: 0.02,
+            wallColor: "#070812", // Noir midnight with indigo undertone
+            floorColor: "#090a14", // Dark carbon-slate (matte diffuse, responds to neon runners)
+            ceilingColor: "#040408",
+            roughness: 0.78,
+            metalness: 0.08,
         },
         lighting: {
-            ambient: { color: "#0e101a", intensity: 0.4 },
-            directional: { position: [10, 10, 5], color: "#ffffff", intensity: 1.15 }, // Pure white on art
-            fill: { position: [-10, 8, -5], color: "#94a3b8", intensity: 0.3 },
-            point: { position: [0, 7.5, 0], color: "#ffffff", intensity: 0.45 },
+            ambient: { color: "#0a081a", intensity: 0.45 },
+            directional: { position: [10, 12, 6], color: "#00f0ff", intensity: 1.25 }, // Electric cyan key light
+            fill: { position: [-10, 8, -6], color: "#ff007f", intensity: 0.85 }, // Hot neon magenta rim light
+            point: { position: [0, 7.5, 0], color: "#00f0ff", intensity: 0.75 },
         },
         frames: {
-            borderColor: "#181920",
+            borderColor: "#141525",
             selectedColor: "#00f0ff", // Electric cyan
-            hoverColor: "#38bdf8",
-            roughness: 0.4,
-            metalness: 0.6,
+            hoverColor: "#ff007f", // Hot neon magenta
+            roughness: 0.25,
+            metalness: 0.75,
         },
         door: {
-            frameColor: "#181920",
+            frameColor: "#141525",
             portalColor: "#00f0ff",
         },
         ui: {
             isLight: false,
             accentColor: "#00f0ff",
-            badgeText: "text-cyan-300 bg-cyan-950/70 border-cyan-700",
+            badgeText: "text-cyan-300 bg-cyan-950/70 border-cyan-500 shadow-[0_0_12px_rgba(0,240,255,0.3)]",
         },
     },
 };
