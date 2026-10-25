@@ -133,8 +133,8 @@ export default function GalleryControls() {
                                 aria-current={currentStyle === style.id ? "true" : undefined}
                                 className={`flex items-center justify-between px-2.5 py-2 text-xs rounded-md cursor-pointer transition-colors ${
                                     styleConfig.ui.isLight
-                                        ? "hover:bg-zinc-100 focus:bg-zinc-100 text-zinc-900"
-                                        : "hover:bg-zinc-800 focus:bg-zinc-800 text-zinc-100"
+                                        ? "text-zinc-900 hover:bg-zinc-100 hover:text-black focus:bg-zinc-100 focus:text-black data-[highlighted]:bg-zinc-100 data-[highlighted]:text-black"
+                                        : "text-zinc-100 hover:bg-zinc-800 hover:text-white focus:bg-zinc-800 focus:text-white data-[highlighted]:bg-zinc-800 data-[highlighted]:text-white"
                                 }`}
                             >
                                 <div className="flex items-center gap-2">

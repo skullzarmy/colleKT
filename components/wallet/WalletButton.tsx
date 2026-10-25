@@ -116,7 +116,7 @@ export default function WalletButton() {
                     <DropdownMenuItem asChild>
                         <Link
                             href={`/gallery/${address}`}
-                            className="flex items-center px-2 py-2 text-sm rounded cursor-pointer text-zinc-200 hover:text-white hover:bg-zinc-800 focus:bg-zinc-800"
+                            className="flex items-center px-2 py-2 text-sm rounded cursor-pointer text-zinc-200 hover:text-white hover:bg-zinc-800 focus:bg-zinc-800 focus:text-white data-[highlighted]:bg-zinc-800 data-[highlighted]:text-white"
                         >
                             <ExternalLink className="w-4 h-4 mr-2 text-cyan-400" />
                             <span>My 3D Gallery</span>
@@ -125,7 +125,7 @@ export default function WalletButton() {
 
                     <DropdownMenuItem
                         onClick={switchAccount}
-                        className="flex items-center px-2 py-2 text-sm rounded cursor-pointer text-zinc-200 hover:text-white hover:bg-zinc-800 focus:bg-zinc-800"
+                        className="flex items-center px-2 py-2 text-sm rounded cursor-pointer text-zinc-200 hover:text-white hover:bg-zinc-800 focus:bg-zinc-800 focus:text-white data-[highlighted]:bg-zinc-800 data-[highlighted]:text-white"
                     >
                         <RefreshCw className="w-4 h-4 mr-2 text-zinc-400" />
                         <span>Switch Account</span>
@@ -135,7 +135,7 @@ export default function WalletButton() {
 
                     <DropdownMenuItem
                         onClick={disconnect}
-                        className="flex items-center px-2 py-2 text-sm rounded cursor-pointer text-zinc-200 hover:text-white hover:bg-zinc-800 focus:bg-zinc-800"
+                        className="flex items-center px-2 py-2 text-sm rounded cursor-pointer text-zinc-200 hover:text-white hover:bg-zinc-800 focus:bg-zinc-800 focus:text-white data-[highlighted]:bg-zinc-800 data-[highlighted]:text-white"
                     >
                         <LogOut className="w-4 h-4 mr-2 text-zinc-400" />
                         <span>Disconnect</span>
@@ -143,7 +143,7 @@ export default function WalletButton() {
 
                     <DropdownMenuItem
                         onClick={hardReset}
-                        className="flex items-center px-2 py-1.5 text-xs rounded cursor-pointer text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 focus:bg-zinc-900"
+                        className="flex items-center px-2 py-1.5 text-xs rounded cursor-pointer text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 focus:bg-zinc-900 focus:text-amber-300 data-[highlighted]:bg-zinc-900 data-[highlighted]:text-amber-300"
                         title="Purges local session and beacon storage if connection is stuck"
                     >
                         <RefreshCw className="w-3.5 h-3.5 mr-2 text-amber-400/80" />
