@@ -1400,7 +1400,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5 text-sm font-semibold text-cyan-300">
                                                 <Sparkles size={16} className="text-cyan-400" />
-                                                <span>ALEATORY Standard</span>
+                                                <span>Aleatory</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 {aleatorySaleInfo?.isMinting && (
@@ -1410,13 +1410,16 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                                     </span>
                                                 )}
                                                 <Badge variant="outline" className="text-cyan-300 border-cyan-800 text-[10px]">
+                                                    ALEATORY-001
+                                                </Badge>
+                                                <Badge variant="outline" className="text-zinc-400 border-zinc-700 text-[10px]">
                                                     {isGenerator ? "GENERATOR" : "PIECE"}
                                                 </Badge>
                                             </div>
                                         </div>
 
                                         <p className="text-xs text-zinc-300 leading-relaxed">
-                                            Deterministic on-chain generative artwork running on Tezos.
+                                            Deterministic on-chain generative artwork running on Tezos conforming to the ALEATORY-001 standard.
                                         </p>
 
                                         {/* Live Minting Dialog / Box */}
@@ -1733,7 +1736,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                                 <span>Generative Parameters</span>
                                                 {isAleatory && (
                                                     <Badge variant="outline" className="ml-1 text-[10px] text-cyan-300 border-cyan-800 bg-cyan-950/40">
-                                                        ALEATORY
+                                                        ALEATORY-001
                                                     </Badge>
                                                 )}
                                                 {isEditArt && (
