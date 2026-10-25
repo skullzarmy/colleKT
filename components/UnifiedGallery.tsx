@@ -155,6 +155,9 @@ export default function UnifiedGallery({
     // Use shared view state instead of local state
     const { cameraMode, setCameraMode } = useViewState();
 
+    // Check for embed mode in URL params
+    const isEmbed = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("embed") === "true";
+
     // Detect gallery type from current pathname
     const getGalleryType = (): "USER" | "CURATION" | "COLLECTION" => {
         if (pathname.startsWith("/curation/")) {
@@ -415,6 +418,21 @@ export default function UnifiedGallery({
 
                 setNfts(processedNFTs);
 
+                // Check for ?token= URL parameter to autofocus or open that piece
+                if (typeof window !== "undefined") {
+                    try {
+                        const tokenParam = new URLSearchParams(window.location.search).get("token");
+                        if (tokenParam) {
+                            const target = processedNFTs.find((t: any) => String(t.tokenId) === String(tokenParam));
+                            if (target) {
+                                setSelectedNFT(target);
+                            }
+                        }
+                    } catch {
+                        /* ignore param error */
+                    }
+                }
+
                 // Preload textures for this room
                 await preloadTextures(processedNFTs, 0, result.pagination.totalItems);
             } catch (err) {
@@ -645,48 +663,52 @@ export default function UnifiedGallery({
 
     return (
         <div className="relative min-h-screen bg-black">
-            {/* Header */}
-            <div className="absolute z-50 top-4 left-4">
-                <Button
-                    onClick={() => router.push("/")}
-                    variant="outline"
-                    className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
-                >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back
-                </Button>
-            </div>
-
-            <div className="absolute z-50 top-4 right-4">
-                <div className="flex items-center gap-2">
-                    <div className="px-4 py-2 text-sm text-white rounded-lg bg-black/50 backdrop-blur-sm">
-                        {getHeaderInfoText()}
-                    </div>
-                    <Button
-                        onClick={handleRefresh}
-                        variant="outline"
-                        className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
-                        disabled={loading}
-                        title="Refresh collection and rebuild cache"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                    </Button>
-                    {galleryError && !isMobile && (
+            {/* Header (hidden in embed mode) */}
+            {!isEmbed && (
+                <>
+                    <div className="absolute z-50 top-4 left-4">
                         <Button
-                            onClick={() => setUse3D(!use3D)}
+                            onClick={() => router.push("/")}
                             variant="outline"
                             className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
                         >
-                            {use3D ? "Switch to 2D" : "Try 3D"}
+                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            Back
                         </Button>
-                    )}
-                    {isMobile && (
-                        <div className="px-3 py-1 text-xs text-white/70 rounded bg-black/50 backdrop-blur-sm">
-                            Mobile 2D Mode
+                    </div>
+
+                    <div className="absolute z-50 top-4 right-4">
+                        <div className="flex items-center gap-2">
+                            <div className="px-4 py-2 text-sm text-white rounded-lg bg-black/50 backdrop-blur-sm">
+                                {getHeaderInfoText()}
+                            </div>
+                            <Button
+                                onClick={handleRefresh}
+                                variant="outline"
+                                className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
+                                disabled={loading}
+                                title="Refresh collection and rebuild cache"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                            </Button>
+                            {galleryError && !isMobile && (
+                                <Button
+                                    onClick={() => setUse3D(!use3D)}
+                                    variant="outline"
+                                    className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
+                                >
+                                    {use3D ? "Switch to 2D" : "Try 3D"}
+                                </Button>
+                            )}
+                            {isMobile && (
+                                <div className="px-3 py-1 text-xs text-white/70 rounded bg-black/50 backdrop-blur-sm">
+                                    Mobile 2D Mode
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
-            </div>
+                    </div>
+                </>
+            )}
 
             {/* 3D Gallery with Error Boundary - Desktop only */}
             {use3D && !isMobile ? (

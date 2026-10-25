@@ -8,6 +8,7 @@ import MediaContent from "./MediaContent";
 import { sanitizeNFTName, getDynamicFontSize, splitTextForDisplay } from "../lib/text-utils";
 import { UnifiedToken } from "../lib/data/types/token-types";
 import { detectMediaType } from "../lib/media-utils";
+import { useViewState } from "@/contexts/ViewStateContext";
 
 interface NFTFrameProps {
     nft: UnifiedToken;
@@ -28,6 +29,7 @@ export default function NFTFrame({
     preloadedTexture,
     aspectRatio = 1, // Default to square if no aspect ratio provided
 }: NFTFrameProps) {
+    const { styleConfig, prefersReducedMotion } = useViewState();
     const meshRef = useRef<THREE.Mesh>(null);
     const frameRef = useRef<THREE.Group>(null);
     const [hovered, setHovered] = useState(false);
@@ -164,11 +166,11 @@ export default function NFTFrame({
     const frameBorderWidth = frameWidth + borderSize;
     const frameBorderHeight = frameHeight + borderSize;
 
-    // Simple animation - no proximity bullshit!
+    // Simple animation - with prefers-reduced-motion check
     useFrame((state) => {
         if (frameRef.current) {
-            // Subtle floating animation only when hovered or selected
-            if (hovered || isSelected) {
+            // Subtle floating animation only when hovered or selected, and reduced motion is off
+            if ((hovered || isSelected) && !prefersReducedMotion) {
                 frameRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 2) * 0.05;
             } else {
                 frameRef.current.position.y = position[1];
@@ -193,9 +195,15 @@ export default function NFTFrame({
             <mesh position={[0, 0, -0.05]} castShadow>
                 <boxGeometry args={[frameBorderWidth, frameBorderHeight, 0.15]} />
                 <meshStandardMaterial
-                    color={isSelected ? "#00bcd4" : hovered ? "#555" : "#333"}
-                    roughness={0.2}
-                    metalness={0.8}
+                    color={
+                        isSelected
+                            ? styleConfig.frames.selectedColor
+                            : hovered
+                            ? styleConfig.frames.hoverColor
+                            : styleConfig.frames.borderColor
+                    }
+                    roughness={styleConfig.frames.roughness}
+                    metalness={styleConfig.frames.metalness}
                 />
             </mesh>
 

@@ -11,7 +11,14 @@
 export type GalleryType = "USER" | "CURATION" | "COLLECTION";
 
 // Input type classification for metadata
-export type InputType = "address" | "domain" | "objkt-curation" | "objkt-collection" | "raw-id";
+export type InputType =
+    | "address"
+    | "domain"
+    | "objkt-curation"
+    | "objkt-collection"
+    | "raw-id"
+    | "single-token"
+    | "aleatory-generator";
 
 // Comprehensive parsed input result
 export interface ParsedInput {

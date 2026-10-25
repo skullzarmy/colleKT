@@ -8,7 +8,7 @@
 /**
  * Supported token standards
  */
-export type TokenStandard = "fa1.2" | "fa2" | "fa1.2-single-asset" | "fa2-single-asset" | "fa2-multi-asset" | "unknown";
+export type TokenStandard = "fa1.2" | "fa2" | "fa1.2-single-asset" | "fa2-single-asset" | "fa2-multi-asset" | "aleatory" | "aleatory-generator" | "unknown";
 
 /**
  * Data source identification

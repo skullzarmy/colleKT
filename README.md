@@ -35,12 +35,25 @@ colleKT is an immersive 3D gallery platform that transforms how users explore an
 
 ### 🎨 Gallery Types
 
-| Type                     | Description                                 | Example Input                          |
-| ------------------------ | ------------------------------------------- | -------------------------------------- |
-| **User Gallery**         | Personal NFT collections by wallet address  | `tz1Qi77tcJn9foeHHP1QHj6UX1m1vLVLMbuY` |
-| **Tezos Domains**        | Human-readable domain resolution            | `skllzrmy.tez`                         |
-| **Curated Galleries**    | objkt.com curations with themed collections | `b264a749-2674-4baa-bc7c-b5ed8bafe54a` |
-| **Contract Collections** | Entire NFT contract collections             | `KT1VLVcGTw6UkwzMiPAn8SNcoMjicitQBGF6` |
+| Type                         | Description                                            | Example Input                          |
+| ---------------------------- | ------------------------------------------------------ | -------------------------------------- |
+| **User Gallery**             | Personal NFT collections by wallet address             | `tz1Qi77tcJn9foeHHP1QHj6UX1m1vLVLMbuY` |
+| **Tezos Domains**            | Human-readable domain resolution                       | `skllzrmy.tez`                         |
+| **Curated Galleries**        | objkt.com curations with themed collections            | `b264a749-2674-4baa-bc7c-b5ed8bafe54a` |
+| **Contract Collections**     | Entire NFT contract collections                        | `KT1VLVcGTw6UkwzMiPAn8SNcoMjicitQBGF6` |
+| **Single Mint Display**      | Direct view of any single FA2 / objkt token            | `https://objkt.com/tokens/KT1.../42`   |
+| **ALEATORY-001 Generators**  | Live sandboxed viewer & piece browser for Aleatory art | `https://aleatory.art/generator/KT1...`|
+
+### 💎 Wallet & Aleatory Ecosystem Integration
+
+-   **Octez.connect Layer**: Resilient wallet integration (`@tezos-x/octez.connect-sdk`, `@taquito/taquito`) with zero balance clutter, active account event synchronization, account switching, and hard session reset recovery.
+-   **Aleatory Identity Standard**: 5-step identity waterfall: `.tez` primary domain > `hack.tez` subdomain > TzKT profile alias > Objkt handle > truncated address (cached with concurrent rate limiting).
+-   **Landing Page Discovery Hub**: Auto-discovers connected user's originated contracts, ALEATORY-001 generators, and Objkt curations with instant live filtering.
+-   **In-Modal Marketplace & Referral**: Active fixed-price listing discovery via Objkt GraphQL; executes in-modal `fulfill_ask` contract call routing platform referral to `tz1Qi77tcJn9foeHHP1QHj6UX1m1vLVLMbuY` (`skllzrmy.tez`).
+-   **Deterministic ALEATORY-001 Frame**: Client-side sandboxed frame (`sandbox="allow-scripts"`, zero network access) executing generative code with canonical `$alea` PRNG (`xmur3` + `sfc32`), extracting on-chain features via `postMessage`.
+-   **Gallery Style Presets**: 5 architectural themes (`classic-dark`, `museum-white`, `cyberpunk-neon`, `warm-solarium`, `minimal-spotlight`) driving 3D PBR materials, multi-light rigs, door portals, frames, and 2D UI with live in-gallery switcher.
+-   **Dynamic Share Suite & URL Configuration**: Live URL parameter generation (`?title=`, `?style=`, `?mode=`, `?token=`, `?embed=`), interactive QR code SVG, social share intents, and responsive iframe embed snippets.
+-   **Universal WCAG 2.1 AA Compliance**: Full accessibility coverage across landing, modals, controls, and 3D UI: minimum 44x44px touch targets, text contrast >= 4.5:1, UI contrast >= 3:1, visible focus rings, ARIA dialog roles, escape dismiss, and `prefers-reduced-motion` animations.
 
 ### 🎮 Interactive Features
 
@@ -48,7 +61,7 @@ colleKT is an immersive 3D gallery platform that transforms how users explore an
 -   **Overview Mode**: Bird's-eye view for quick collection browsing
 -   **Room-based Layout**: Automatic pagination with 20 NFTs per room
 -   **Smart Art Arrangement**: Dynamic wall positioning based on aspect ratios
--   **Media Modal**: Detailed NFT viewing with metadata display
+-   **Media Modal**: Detailed NFT viewing with metadata display, active marketplace pricing, and in-modal collecting
 -   **Texture Preloading**: Smooth navigation with background asset loading
 
 ### 🛠 Technical Highlights

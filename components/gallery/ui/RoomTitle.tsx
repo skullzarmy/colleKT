@@ -3,6 +3,7 @@
 import { Text3D, Center } from "@react-three/drei";
 import { suspend } from "suspend-react";
 import { useGalleryMetadata } from "@/hooks/use-gallery-metadata";
+import { useViewState } from "@/contexts/ViewStateContext";
 
 interface RoomTitleProps {
     roomNumber: number;
@@ -32,11 +33,24 @@ export default function RoomTitle({
     hallwayLength = 30,
     hallwayWidth = 12, // Default hallway width
 }: RoomTitleProps) {
+    const { styleConfig } = useViewState();
     // Position in center of hallway if not specified
     const titlePosition: [number, number, number] = position || [0, 7, hallwayLength / 2];
 
     // Use the gallery metadata hook
     const galleryMetadata = useGalleryMetadata(walletAddress, domain, displayName);
+
+    // Check for custom URL title override
+    const customTitle = (() => {
+        if (typeof window !== "undefined") {
+            try {
+                return new URLSearchParams(window.location.search).get("title");
+            } catch {
+                return null;
+            }
+        }
+        return null;
+    })();
 
     // Load font using suspend
     const font = suspend(async () => {
@@ -46,6 +60,10 @@ export default function RoomTitle({
 
     // Generate title text based on gallery type and metadata
     const getTitleText = () => {
+        if (customTitle) {
+            return customTitle;
+        }
+
         if (galleryMetadata.isLoading) {
             return "Loading Gallery...";
         }
@@ -72,7 +90,7 @@ export default function RoomTitle({
 
     const titleText = getTitleText();
     const roomText = `Room ${roomNumber + 1} of ${totalRooms}`;
-    const titleColor = galleryMetadata.isLoading ? "#888888" : color;
+    const titleColor = galleryMetadata.isLoading ? "#888888" : (color ?? styleConfig.ui.accentColor);
 
     // Calculate dynamic font size based on text length and room width
     const calculateFontSize = (text: string, maxWidth: number, baseFontSize: number = 0.8) => {

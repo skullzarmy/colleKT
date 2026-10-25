@@ -36,23 +36,120 @@ export class InputParser {
             return this.createInvalidResult(trimmed, "Empty input");
         }
 
-        // 1. Tezos Address Detection (tz1, tz2, tz3, KT1)
+        // 1. Single Token Detection (e.g. objkt token URL, KT1...:123)
+        const singleTokenResult = this.parseSingleToken(trimmed);
+        if (singleTokenResult.isValid) return singleTokenResult;
+
+        // 2. Aleatory.art URL Detection (generators and pieces)
+        const aleatoryResult = this.parseAleatoryUrl(trimmed);
+        if (aleatoryResult.isValid) return aleatoryResult;
+
+        // 3. Tezos Address Detection (tz1, tz2, tz3, KT1)
         const addressResult = this.parseAddress(trimmed);
         if (addressResult.isValid) return addressResult;
 
-        // 2. objkt.com URL Detection (curations and collections)
+        // 4. objkt.com URL Detection (curations and collections)
         const objktResult = this.parseObjktUrl(trimmed);
         if (objktResult.isValid) return objktResult;
 
-        // 3. Raw ID Detection (pure numbers for curations, contract addresses)
+        // 5. Raw ID Detection (pure numbers for curations, contract addresses)
         const idResult = this.parseRawId(trimmed);
         if (idResult.isValid) return idResult;
 
-        // 4. Domain Resolution (tezos domains, .tez, etc.)
+        // 6. Domain Resolution (tezos domains, .tez, etc.)
         const domainResult = await this.parseDomain(trimmed);
         if (domainResult.isValid) return domainResult;
 
         return this.createInvalidResult(trimmed, "Unrecognized input format");
+    }
+
+    /**
+     * Parse single token inputs (e.g. objkt token URL, KT1...:123)
+     */
+    private static parseSingleToken(input: string): ParsedInput {
+        // Pattern 1: objkt.com/tokens/KT1.../123 or objkt.com/asset/KT1.../123
+        const objktTokenMatch = input.match(/objkt\.com\/(?:tokens|asset)\/(KT1[a-zA-Z0-9]{33})\/(\d+)/);
+        if (objktTokenMatch) {
+            const contract = objktTokenMatch[1];
+            const tokenId = objktTokenMatch[2];
+            return {
+                type: "COLLECTION",
+                id: contract,
+                contractAddress: contract,
+                isValid: true,
+                route: `/collection/${contract}?token=${tokenId}`,
+                metadata: {
+                    inputType: "single-token",
+                    originalInput: input,
+                    extractedId: tokenId,
+                },
+            };
+        }
+
+        // Pattern 2: KT1...:123 or KT1.../token/123
+        const directTokenMatch = input.match(/^(KT1[a-zA-Z0-9]{33})[:/](?:token\/)?(\d+)$/);
+        if (directTokenMatch) {
+            const contract = directTokenMatch[1];
+            const tokenId = directTokenMatch[2];
+            return {
+                type: "COLLECTION",
+                id: contract,
+                contractAddress: contract,
+                isValid: true,
+                route: `/collection/${contract}?token=${tokenId}`,
+                metadata: {
+                    inputType: "single-token",
+                    originalInput: input,
+                    extractedId: tokenId,
+                },
+            };
+        }
+
+        return this.createInvalidResult(input, "Not a single token format");
+    }
+
+    /**
+     * Parse aleatory.art URLs (generators and pieces)
+     */
+    private static parseAleatoryUrl(input: string): ParsedInput {
+        // Piece URL: aleatory.art/piece/KT1.../123
+        const pieceMatch = input.match(/aleatory\.art\/piece\/(KT1[a-zA-Z0-9]{33})\/(\d+)/);
+        if (pieceMatch) {
+            const contract = pieceMatch[1];
+            const tokenId = pieceMatch[2];
+            return {
+                type: "COLLECTION",
+                id: contract,
+                contractAddress: contract,
+                isValid: true,
+                route: `/collection/${contract}?token=${tokenId}&aleatory=true`,
+                metadata: {
+                    inputType: "single-token",
+                    originalInput: input,
+                    extractedId: tokenId,
+                },
+            };
+        }
+
+        // Generator URL: aleatory.art/generator/KT1...
+        const generatorMatch = input.match(/aleatory\.art\/generator\/(KT1[a-zA-Z0-9]{33})/);
+        if (generatorMatch) {
+            const contract = generatorMatch[1];
+            return {
+                type: "COLLECTION",
+                id: contract,
+                contractAddress: contract,
+                isValid: true,
+                route: `/collection/${contract}?aleatory=true`,
+                metadata: {
+                    inputType: "aleatory-generator",
+                    originalInput: input,
+                    extractedId: contract,
+                },
+            };
+        }
+
+        return this.createInvalidResult(input, "Not an aleatory.art URL");
     }
 
     /**

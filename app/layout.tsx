@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ViewStateProvider } from "@/contexts/ViewStateContext";
+import { WalletProvider } from "@/contexts/WalletContext";
 import UmamiAnalytics from "@/components/analytics/UmamiAnalytics";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -30,7 +31,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
             </head>
             <body className={inter.className} suppressHydrationWarning>
-                <ViewStateProvider>{children}</ViewStateProvider>
+                <WalletProvider>
+                    <ViewStateProvider>{children}</ViewStateProvider>
+                </WalletProvider>
                 <UmamiAnalytics />
             </body>
         </html>

@@ -3,6 +3,7 @@
 import { Text, Box, Cylinder, Sphere } from "@react-three/drei";
 import { useRef, useState, useEffect } from "react";
 import { Group } from "three";
+import { useViewState } from "@/contexts/ViewStateContext";
 
 interface DoorProps {
     position: [number, number, number];
@@ -13,6 +14,7 @@ interface DoorProps {
 }
 
 export default function Door({ position, rotation, label, onClick, disabled }: DoorProps) {
+    const { styleConfig } = useViewState();
     const doorRef = useRef<Group>(null);
     const [isHovered, setIsHovered] = useState(false);
 
@@ -51,20 +53,41 @@ export default function Door({ position, rotation, label, onClick, disabled }: D
                 <group>
                     {/* Glowing border frame */}
                     <Box args={[2.8, 0.05, 0.05]} position={[0, 2.2, 0]}>
-                        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.3} />
+                        <meshStandardMaterial
+                            color={styleConfig.door.portalColor}
+                            emissive={styleConfig.door.portalColor}
+                            emissiveIntensity={0.5}
+                        />
                     </Box>
                     <Box args={[2.8, 0.05, 0.05]} position={[0, -2.2, 0]}>
-                        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.3} />
+                        <meshStandardMaterial
+                            color={styleConfig.door.portalColor}
+                            emissive={styleConfig.door.portalColor}
+                            emissiveIntensity={0.5}
+                        />
                     </Box>
                     <Box args={[0.05, 4.4, 0.05]} position={[-1.4, 0, 0]}>
-                        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.3} />
+                        <meshStandardMaterial
+                            color={styleConfig.door.portalColor}
+                            emissive={styleConfig.door.portalColor}
+                            emissiveIntensity={0.5}
+                        />
                     </Box>
                     <Box args={[0.05, 4.4, 0.05]} position={[1.4, 0, 0]}>
-                        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.3} />
+                        <meshStandardMaterial
+                            color={styleConfig.door.portalColor}
+                            emissive={styleConfig.door.portalColor}
+                            emissiveIntensity={0.5}
+                        />
                     </Box>
 
                     {/* Subtle ambient glow */}
-                    <pointLight position={[0, 0, 1]} intensity={0.2} color="#ffffff" distance={6} />
+                    <pointLight
+                        position={[0, 0, 1]}
+                        intensity={0.4}
+                        color={styleConfig.door.portalColor}
+                        distance={6}
+                    />
                 </group>
             )}
             {/* Doorway Frame (recessed into wall) */}
