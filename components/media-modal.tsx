@@ -83,7 +83,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     // Interactive / Aleatory code runner state
     const [interactiveCode, setInteractiveCode] = useState<string | null>(null);
     const [isLoadingCode, setIsLoadingCode] = useState(false);
-    const [useAleatoryHarness, setUseAleatoryHarness] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
     const [extractedFeatures, setExtractedFeatures] = useState<Record<string, string | number | boolean> | null>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -114,7 +114,6 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             setBuySuccessHash(null);
             setInteractiveCode(null);
             setIsLoadingCode(false);
-            setUseAleatoryHarness(false);
             setExtractedFeatures(null);
         }
     }, [nft?.id]);
@@ -446,8 +445,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const isGenerator = Boolean(
         nft &&
         (nft.standard === "aleatory-generator" ||
-            nft.metadata?.attributes?.some((a) => a.trait_type?.toLowerCase() === "generator") ||
-            isEditArt)
+            nft.metadata?.attributes?.some((a) => a.trait_type?.toLowerCase() === "generator"))
     );
 
     const getCollectionDisplayName = () => {
@@ -592,9 +590,6 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
 
                     setInteractiveCode(prepared);
                     setIsLoadingCode(false);
-                    if (isAleatory) {
-                        setUseAleatoryHarness(true);
-                    }
                 })
                 .catch((e) => {
                     console.warn("[MediaModal] Failed to fetch interactive code text:", e);
@@ -631,6 +626,29 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const handleZoomOut = () => setZoom((prev) => Math.max(prev / 1.2, 0.1));
     const handleZoomReset = () => setZoom(1);
     const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
+
+    const handleReloadInteractive = () => {
+        setReloadKey((prev) => prev + 1);
+        if (iframeRef.current) {
+            if (interactiveCode) {
+                const currentDoc = interactiveCode;
+                iframeRef.current.srcdoc = "";
+                setTimeout(() => {
+                    if (iframeRef.current) {
+                        iframeRef.current.srcdoc = currentDoc;
+                    }
+                }, 50);
+            } else if (mediaUri) {
+                const currentSrc = iframeRef.current.src;
+                iframeRef.current.src = "";
+                setTimeout(() => {
+                    if (iframeRef.current) {
+                        iframeRef.current.src = currentSrc;
+                    }
+                }, 50);
+            }
+        }
+    };
 
     // In-Modal Collect / Buy Action with Platform Referrer
     const handleBuy = async () => {
@@ -685,8 +703,9 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             return (
                 <div className={htmlContainerClass}>
                     <div className="relative w-full h-full overflow-hidden bg-black rounded-lg shadow-2xl max-w-7xl">
-                        {useAleatoryHarness && interactiveCode ? (
+                        {isAleatory && interactiveCode ? (
                             <AleatoryFrame
+                                key={`aleatory-${nft.id}-${reloadKey}`}
                                 code={interactiveCode}
                                 seed={
                                     (nft.metadata?.attributes?.find((a) => a.trait_type?.toLowerCase() === "seed")
@@ -703,6 +722,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                         ) : (
                             <iframe
                                 ref={iframeRef}
+                                key={`iframe-${nft.id}-${reloadKey}`}
                                 srcDoc={interactiveCode || undefined}
                                 src={!interactiveCode ? mediaUri : undefined}
                                 className="w-full h-full border-0"
@@ -712,32 +732,29 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             />
                         )}
 
-                        {/* Top controls: Aleatory runner toggle & Fullscreen */}
+                        {/* Top controls: Reload & Fullscreen */}
                         <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
-                            {interactiveCode && (
-                                <Button
-                                    onClick={() => setUseAleatoryHarness(!useAleatoryHarness)}
-                                    size="sm"
-                                    variant="secondary"
-                                    className="text-xs text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700 min-h-[36px] px-3 focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                    title={useAleatoryHarness ? "Switch to standard iframe" : "Run in deterministic $alea harness"}
-                                >
-                                    <Sparkles size={14} className="mr-1.5 text-cyan-400" />
-                                    {useAleatoryHarness ? "$alea Harness" : "Raw Web"}
-                                </Button>
-                            )}
+                            <Button
+                                onClick={handleReloadInteractive}
+                                size="sm"
+                                variant="secondary"
+                                aria-label="Reload artwork"
+                                title="Reload artwork"
+                                className="text-white hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700 min-h-[36px] min-w-[36px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                            >
+                                <RotateCcw size={15} aria-hidden="true" />
+                            </Button>
 
-                            {!isFullscreen && (
-                                <Button
-                                    onClick={toggleFullscreen}
-                                    size="sm"
-                                    variant="secondary"
-                                    aria-label="Toggle Fullscreen"
-                                    className="text-white bg-black/80 hover:bg-black/95 border-zinc-700 min-h-[36px] min-w-[36px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                >
-                                    <Maximize2 size={16} />
-                                </Button>
-                            )}
+                            <Button
+                                onClick={toggleFullscreen}
+                                size="sm"
+                                variant="secondary"
+                                aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                                className="text-white hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700 min-h-[36px] min-w-[36px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                            >
+                                {isFullscreen ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -1118,7 +1135,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                             </Badge>
                                         </div>
                                         <p className="text-xs text-zinc-300 leading-relaxed">
-                                            Deterministic generative contract running on Tezos with sandboxed `$alea` PRNG harness.
+                                            Deterministic on-chain generative artwork running on Tezos.
                                         </p>
                                         <div className="flex flex-col gap-2 pt-1">
                                             {isGenerator ? (
