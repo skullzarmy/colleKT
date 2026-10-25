@@ -12,6 +12,7 @@
 
 import { objktClient } from "./objkt-client";
 import { UnifiedToken, UnifiedMetadata, TokenStandard, DataSource } from "../types/token-types";
+import { getIPFSUrl } from "@/lib/utils";
 
 /**
  * Token identifier from objkt.com queries
@@ -351,8 +352,8 @@ export class ObjktQueries {
                 description: gallery.description || "",
                 slug: gallery.slug,
                 totalItems,
-                coverUri: gallery.logo, // Use logo as cover image
-                logo: gallery.logo,
+                coverUri: gallery.logo ? getIPFSUrl(gallery.logo) : undefined, // Use logo as cover image
+                logo: gallery.logo ? getIPFSUrl(gallery.logo) : undefined,
                 items: gallery.items,
                 maxItems: gallery.max_items,
                 owners: gallery.owners,

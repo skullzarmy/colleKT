@@ -34,6 +34,7 @@ import {
 } from "@/lib/tezos/market-service";
 import AleatoryFrame from "@/components/aleatory/AleatoryFrame";
 import { resolveIdentity, type ResolvedIdentity } from "@/lib/tezos/identity-resolver";
+import { getIPFSUrl } from "@/lib/utils";
 
 interface CollectionDetails {
     name?: string;
@@ -257,7 +258,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                     setCollectionDetails({
                         name: fa.name || undefined,
                         description: fa.description || undefined,
-                        logo: fa.logo || undefined,
+                        logo: fa.logo ? getIPFSUrl(fa.logo) : undefined,
                         contractAddress: fa.contract || contract,
                         creatorAddress: fa.creator_address || undefined,
                         creatorAlias: creatorAlias || undefined,
@@ -291,12 +292,14 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                         const tzktData = await tzktRes.json();
                         const cName = tzktData.metadata?.name || tzktData.alias;
                         const cDesc = tzktData.metadata?.description;
+                        const cLogo = tzktData.metadata?.thumbnailUri || tzktData.metadata?.image || tzktData.metadata?.logo;
                         const cCreator = tzktData.creator?.address;
                         const cCreatorAlias = tzktData.creator?.alias;
 
                         setCollectionDetails({
                             name: cName,
                             description: cDesc,
+                            logo: cLogo ? getIPFSUrl(cLogo) : undefined,
                             contractAddress: contract,
                             creatorAddress: cCreator,
                             creatorAlias: cCreatorAlias,
@@ -319,9 +322,11 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                     const tzktRes = await fetch(`https://api.tzkt.io/v1/contracts/${contract}`);
                     if (tzktRes.ok) {
                         const tzktData = await tzktRes.json();
+                        const cLogo = tzktData.metadata?.thumbnailUri || tzktData.metadata?.image || tzktData.metadata?.logo;
                         setCollectionDetails({
                             name: tzktData.metadata?.name || tzktData.alias,
                             description: tzktData.metadata?.description,
+                            logo: cLogo ? getIPFSUrl(cLogo) : undefined,
                             contractAddress: contract,
                             creatorAddress: tzktData.creator?.address,
                             creatorAlias: tzktData.creator?.alias,
@@ -471,19 +476,6 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     };
 
     const generativeParams = getGenerativeParams();
-
-    const getIPFSUrl = (uri: string) => {
-        if (!uri) return "";
-        if (uri.startsWith("data:")) return uri;
-
-        if (uri.startsWith("ipfs://")) {
-            let withoutProtocol = uri.replace("ipfs://", "");
-            // Handle CID followed directly by query params without trailing slash, e.g. Qm123?m0=... -> Qm123/?m0=...
-            withoutProtocol = withoutProtocol.replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
-            return `https://ipfs.fileship.xyz/${withoutProtocol}`;
-        }
-        return uri;
-    };
 
     const getRawMediaUri = () => {
         if (!nft) return null;
@@ -796,9 +788,13 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             <div className="relative w-64 h-64 mb-6 overflow-hidden rounded-lg shadow-2xl group">
                                 {coverUri ? (
                                     <img
-                                        src={coverUri}
+                                        src={getIPFSUrl(coverUri)}
                                         alt="Album art"
                                         className="absolute inset-0 object-cover w-full h-full"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLElement;
+                                            target.style.display = "none";
+                                        }}
                                     />
                                 ) : (
                                     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-cyan-500 to-blue-600">
@@ -1208,9 +1204,13 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     <div className="flex items-start gap-3">
                                         {collectionDetails?.logo && (
                                             <img
-                                                src={collectionDetails.logo}
+                                                src={getIPFSUrl(collectionDetails.logo)}
                                                 alt={`${getCollectionDisplayName()} logo`}
                                                 className="w-12 h-12 rounded-lg object-cover border border-zinc-700 bg-zinc-800 shrink-0"
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLElement;
+                                                    target.style.display = "none";
+                                                }}
                                             />
                                         )}
                                         <div className="flex-1 min-w-0">

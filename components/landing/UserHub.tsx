@@ -21,6 +21,7 @@ import {
     Image as ImageIcon,
 } from "lucide-react";
 import ShareModal from "@/components/share/ShareModal";
+import { getIPFSUrl } from "@/lib/utils";
 
 interface UserHubProps {
     address: string;
@@ -204,9 +205,13 @@ export default function UserHub({ address, displayName }: UserHubProps) {
                                     <div className="flex items-start gap-3.5">
                                         {col.logo ? (
                                             <img
-                                                src={col.logo}
+                                                src={getIPFSUrl(col.logo)}
                                                 alt={`${col.name} logo`}
                                                 className="w-14 h-14 rounded-xl object-cover border-2 border-zinc-600 bg-zinc-800 shrink-0"
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLElement;
+                                                    target.style.display = "none";
+                                                }}
                                             />
                                         ) : (
                                             <div className="w-14 h-14 rounded-xl bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center shrink-0">
@@ -260,9 +265,13 @@ export default function UserHub({ address, displayName }: UserHubProps) {
                                                         >
                                                             {imgUri ? (
                                                                 <img
-                                                                    src={imgUri}
+                                                                    src={getIPFSUrl(imgUri)}
                                                                     alt={pt.name || "Token preview"}
                                                                     className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                                                    onError={(e) => {
+                                                                        const target = e.target as HTMLElement;
+                                                                        target.style.display = "none";
+                                                                    }}
                                                                 />
                                                             ) : (
                                                                 <div className="w-full h-full flex items-center justify-center text-[10px] text-zinc-300 font-mono">
@@ -326,9 +335,13 @@ export default function UserHub({ address, displayName }: UserHubProps) {
                                     <div className="flex items-start gap-3.5">
                                         {cur.logo ? (
                                             <img
-                                                src={cur.logo}
+                                                src={getIPFSUrl(cur.logo)}
                                                 alt={`${cur.name} logo`}
                                                 className="w-14 h-14 rounded-xl object-cover border-2 border-zinc-600 bg-zinc-800 shrink-0"
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLElement;
+                                                    target.style.display = "none";
+                                                }}
                                             />
                                         ) : (
                                             <div className="w-14 h-14 rounded-xl bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center shrink-0">
@@ -380,9 +393,13 @@ export default function UserHub({ address, displayName }: UserHubProps) {
                                                         >
                                                             {imgUri ? (
                                                                 <img
-                                                                    src={imgUri}
+                                                                    src={getIPFSUrl(imgUri)}
                                                                     alt={pt.name || "Token preview"}
                                                                     className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                                                    onError={(e) => {
+                                                                        const target = e.target as HTMLElement;
+                                                                        target.style.display = "none";
+                                                                    }}
                                                                 />
                                                             ) : (
                                                                 <div className="w-full h-full flex items-center justify-center text-[10px] text-zinc-300 font-mono">

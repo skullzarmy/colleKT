@@ -42,14 +42,14 @@ export interface DiscoveredCuration {
 }
 
 const TZKT_API = "https://api.tzkt.io";
+import { getIPFSUrl } from "@/lib/utils";
+
 const OBJKT_GRAPHQL = "https://data.objkt.com/v3/graphql";
 
 export function formatIpfsUrl(uri?: string | null): string | undefined {
     if (!uri) return undefined;
-    if (uri.startsWith("ipfs://")) {
-        return `https://ipfs.fileship.xyz/${uri.replace("ipfs://", "")}`;
-    }
-    return uri;
+    const resolved = getIPFSUrl(uri);
+    return resolved || undefined;
 }
 
 /**
