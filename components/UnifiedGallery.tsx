@@ -12,6 +12,7 @@ import { collektClient } from "@/lib/data/sources/collekt-client";
 import { UnifiedToken } from "@/lib/data/types/token-types";
 import * as THREE from "three";
 import LoadingAnimation from "./LoadingAnimation";
+import { isWebGLAvailable } from "@/lib/gallery/webgl-detector";
 
 // Dynamically import Gallery3D with no SSR to prevent hydration issues
 const Gallery3D = dynamic(() => import("@/components/Gallery3D"), {
@@ -58,19 +59,20 @@ class ErrorBoundary extends Component<
     }
 }
 
-// Simple 2D Gallery Fallback
+// Simple 2D Gallery Fallback with full WCAG 2.2 AA accessibility
 function Simple2DGallery({
     nfts,
     onNFTSelect,
     getImageUri,
+    webglUnavailable = false,
 }: {
     nfts: UnifiedToken[];
     onNFTSelect: (nft: UnifiedToken) => void;
     getImageUri: (nft: UnifiedToken) => string | null;
+    webglUnavailable?: boolean;
 }) {
     const getIPFSUrl = (uri: string) => {
         if (uri.startsWith("ipfs://")) {
-            // Extract CID and preserve any query parameters
             const withoutProtocol = uri.replace("ipfs://", "");
             return `https://ipfs.fileship.xyz/${withoutProtocol}`;
         }
@@ -78,43 +80,70 @@ function Simple2DGallery({
     };
 
     return (
-        <div className="min-h-screen p-8 bg-black">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="min-h-screen p-6 sm:p-8 bg-black text-white pt-20">
+            {webglUnavailable && (
+                <div
+                    className="max-w-5xl mx-auto mb-6 p-4 rounded-xl bg-zinc-900 border-2 border-amber-600/70 text-amber-200 text-xs flex items-center justify-between shadow-lg"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <div className="flex items-center gap-2.5">
+                        <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-950 px-2 py-0.5 rounded border border-amber-600 text-amber-300 shrink-0">
+                            2D View Active
+                        </span>
+                        <span className="text-zinc-200 text-xs">
+                            Hardware-accelerated 3D is disabled or unsupported in this browser environment. Displaying in high-performance 2D gallery view.
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 max-w-7xl mx-auto">
                 {nfts.map((nft) => {
                     const imageUri = getImageUri(nft);
+                    const title = nft.metadata?.name || `Token #${nft.tokenId}`;
                     return (
                         <div
                             key={nft.id}
-                            className="overflow-hidden transition-colors bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700"
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`View details for ${title}`}
+                            className="overflow-hidden transition-all bg-zinc-900/90 border-2 border-zinc-700/80 rounded-xl cursor-pointer hover:border-zinc-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none group shadow-md"
                             onClick={() => onNFTSelect(nft)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    onNFTSelect(nft);
+                                }
+                            }}
                         >
-                            <div className="flex items-center justify-center bg-gray-900 aspect-square">
+                            <div className="flex items-center justify-center bg-zinc-950 aspect-square overflow-hidden relative">
                                 {imageUri ? (
                                     <img
                                         src={getIPFSUrl(imageUri)}
-                                        alt={nft.metadata?.name || `Token #${nft.tokenId}`}
-                                        className="object-cover w-full h-full"
+                                        alt={title}
+                                        className="object-cover w-full h-full transition-transform group-hover:scale-105"
                                         crossOrigin="anonymous"
                                         onError={(e) => {
                                             const target = e.target as HTMLImageElement;
                                             target.style.display = "none";
                                             target.parentElement!.innerHTML =
-                                                '<div class="text-white text-center">📷<br/>Image Failed</div>';
+                                                '<div class="text-zinc-300 text-center text-xs p-2">Image Preview Unavailable</div>';
                                         }}
                                     />
                                 ) : (
-                                    <div className="text-center text-white">
-                                        🖼
-                                        <br />
-                                        No Image
+                                    <div className="text-center text-zinc-300 text-xs">
+                                        🖼<br />No Preview
                                     </div>
                                 )}
                             </div>
-                            <div className="p-3">
-                                <h3 className="text-sm font-medium text-white truncate">
-                                    {nft.metadata?.name || `Token #${nft.tokenId}`}
+                            <div className="p-3.5 space-y-1">
+                                <h3 className="text-sm font-bold text-white truncate group-hover:text-cyan-300 transition-colors">
+                                    {title}
                                 </h3>
-                                <p className="mt-1 text-xs text-gray-400">{nft.contractAddress.slice(0, 8)}...</p>
+                                <p className="font-mono text-xs text-zinc-300 truncate">
+                                    {nft.contractAddress.slice(0, 8)}...#{nft.tokenId}
+                                </p>
                             </div>
                         </div>
                     );
@@ -147,6 +176,7 @@ export default function UnifiedGallery({
     const [selectedNFT, setSelectedNFT] = useState<UnifiedToken | null>(null);
     const [use3D, setUse3D] = useState(true);
     const [isMobile, setIsMobile] = useState(false);
+    const [hasWebGL, setHasWebGL] = useState<boolean>(true);
     const [galleryError, setGalleryError] = useState<string | null>(null);
     const [loadingProgress, setLoadingProgress] = useState<string>("Fetching NFTs...");
     const [preloadedTextures, setPreloadedTextures] = useState<Map<string, THREE.Texture>>(new Map());
@@ -213,6 +243,41 @@ export default function UnifiedGallery({
                 return () => pointerQuery.removeListener(handlePointerChange);
             }
         }
+    }, []);
+
+    // Detect WebGL capability and handle unhandled context rejections
+    useEffect(() => {
+        const webglOk = isWebGLAvailable();
+        setHasWebGL(webglOk);
+        if (!webglOk) {
+            setUse3D(false);
+            setGalleryError(
+                "Hardware acceleration / WebGL is disabled or unavailable in this browser. Automatically switched to 2D view."
+            );
+        }
+
+        const handleRejection = (event: PromiseRejectionEvent) => {
+            const reason = event.reason?.message || String(event.reason || "");
+            if (
+                reason.includes("WebGL") ||
+                reason.includes("WebGLRenderer") ||
+                reason.includes("Error creating WebGL context")
+            ) {
+                console.warn(
+                    "[UnifiedGallery] WebGL initialization rejected, gracefully switching to 2D view:",
+                    reason
+                );
+                event.preventDefault();
+                setHasWebGL(false);
+                setUse3D(false);
+                setGalleryError(
+                    "WebGL context could not be created. Gracefully switched to 2D gallery view."
+                );
+            }
+        };
+
+        window.addEventListener("unhandledrejection", handleRejection);
+        return () => window.removeEventListener("unhandledrejection", handleRejection);
     }, []);
 
     // Update page title when metadata loads (only if enabled)
@@ -710,18 +775,21 @@ export default function UnifiedGallery({
                 </>
             )}
 
-            {/* 3D Gallery with Error Boundary - Desktop only */}
-            {use3D && !isMobile ? (
+            {/* 3D Gallery with Error Boundary - Desktop only when WebGL is active */}
+            {use3D && !isMobile && hasWebGL ? (
                 <ErrorBoundary
                     fallback={
                         <div className="flex items-center justify-center min-h-screen bg-black">
-                            <div className="space-y-4 text-center">
-                                <p className="text-xl text-red-400">Failed to load 3D gallery</p>
-                                <p className="text-white/60">
-                                    {galleryError || "Cannot read properties of undefined (reading 'S')"}
+                            <div className="space-y-4 text-center max-w-md p-6">
+                                <p className="text-xl font-bold text-amber-400">3D Acceleration Unavailable</p>
+                                <p className="text-sm text-zinc-200">
+                                    {galleryError || "WebGL context could not be created on this device."}
                                 </p>
-                                <p className="text-white/60">Showing 2D gallery instead:</p>
-                                <Button onClick={() => setUse3D(false)} className="bg-cyan-500 hover:bg-cyan-600">
+                                <p className="text-xs text-zinc-400">Switching to responsive 2D gallery:</p>
+                                <Button
+                                    onClick={() => setUse3D(false)}
+                                    className="bg-white text-zinc-950 font-bold hover:bg-zinc-200 min-h-[44px]"
+                                >
                                     Switch to 2D Gallery
                                 </Button>
                             </div>
@@ -730,6 +798,7 @@ export default function UnifiedGallery({
                     onError={(error) => {
                         console.error("3D Gallery Error:", error);
                         setGalleryError(error.message);
+                        setHasWebGL(false);
                         setUse3D(false);
                     }}
                 >
@@ -744,10 +813,20 @@ export default function UnifiedGallery({
                         onRoomChange={updateRoomInUrl}
                         totalNFTs={totalNFTs}
                         topOffset={64} // 64px to avoid overlapping with Back button
+                        onWebGLError={(err) => {
+                            setHasWebGL(false);
+                            setUse3D(false);
+                            setGalleryError(err);
+                        }}
                     />
                 </ErrorBoundary>
             ) : (
-                <Simple2DGallery nfts={nfts} onNFTSelect={setSelectedNFT} getImageUri={getImageUri} />
+                <Simple2DGallery
+                    nfts={nfts}
+                    onNFTSelect={setSelectedNFT}
+                    getImageUri={getImageUri}
+                    webglUnavailable={!hasWebGL}
+                />
             )}
 
             {/* Metadata Panel */}
