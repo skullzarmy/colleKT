@@ -2,7 +2,10 @@
  * User Discovery Service
  *
  * Discovers collections and curations associated with a Tezos account:
- * 1. Originated contracts (via TzKT API) - reveals contracts and ALEATORY-001 generators
+ * 1. Strict Art Contract Filtering:
+ *    - Must be FA2 / tzip-12 or ALEATORY-001 (excludes generic smart contracts/multisigs)
+ *    - Must have 0 decimals (strictly excludes fungible coins, DAO tokens, and DeFi assets)
+ *    - Must have tokensCount > 0
  * 2. FA collections and contract galleries (via Objkt GraphQL API) - reveals collection names, logos, descriptions, and token preview thumbnails
  * 3. User curations (via Objkt GraphQL API) - queries gallery with curators filter, pulling titles, logos, descriptions, and item tokens
  */
@@ -50,13 +53,14 @@ export function formatIpfsUrl(uri?: string | null): string | undefined {
 }
 
 /**
- * Fetch all collections originated or managed by an address, enriched with Objkt metadata
+ * Fetch all verified NFT art collections originated or curated by an address.
+ * Strictly excludes contracts with decimals > 0 (DAO tokens, coins, fungibles) and non-asset contracts.
  */
 export async function fetchUserCollections(address: string): Promise<DiscoveredCollection[]> {
     if (!address) return [];
 
     try {
-        // Run TzKT contracts query and Objkt fa/gallery query in parallel
+        // Query TzKT contracts and Objkt fa/gallery with strict art/NFT filters in parallel
         const [tzktRes, objktRes] = await Promise.allSettled([
             fetch(`${TZKT_API}/v1/contracts?creator=${address}&limit=50&sort.desc=firstActivity`, {
                 next: { revalidate: 60 },
@@ -67,7 +71,15 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                 body: JSON.stringify({
                     query: `
                         query GetCreatorCollections($address: String!) {
-                            fa(where: { creator_address: { _eq: $address } }, order_by: { items: desc }, limit: 50) {
+                            fa(
+                                where: {
+                                    creator_address: { _eq: $address }
+                                    items: { _gt: 0 }
+                                    _not: { tokens: { decimals: { _gt: 0 } } }
+                                }
+                                order_by: { items: desc }
+                                limit: 50
+                            ) {
                                 contract
                                 name
                                 description
@@ -78,12 +90,15 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                                     name
                                     display_uri
                                     thumbnail_uri
+                                    decimals
                                 }
                             }
                             contractGalleries: gallery(
                                 where: {
                                     curators: { curator_address: { _eq: $address } }
                                     gallery_id: { _like: "KT1%" }
+                                    items: { _gt: 0 }
+                                    _not: { tokens: { token: { decimals: { _gt: 0 } } } }
                                 }
                                 order_by: { inserted_at: desc }
                                 limit: 50
@@ -100,6 +115,7 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                                         name
                                         display_uri
                                         thumbnail_uri
+                                        decimals
                                     }
                                 }
                             }
@@ -111,7 +127,7 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
             }),
         ]);
 
-        // Map of enriched data from Objkt
+        // Map of verified art metadata from Objkt
         const enrichedMap = new Map<
             string,
             {
@@ -120,6 +136,7 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                 logo?: string;
                 items?: number;
                 previewTokens?: PreviewToken[];
+                hasDecimals: boolean;
             }
         >();
 
@@ -138,6 +155,7 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                                 name?: string;
                                 display_uri?: string;
                                 thumbnail_uri?: string;
+                                decimals?: number;
                             }>;
                         }>;
                         contractGalleries?: Array<{
@@ -153,20 +171,27 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                                     name?: string;
                                     display_uri?: string;
                                     thumbnail_uri?: string;
+                                    decimals?: number;
                                 };
                             }>;
                         }>;
                     };
                 };
 
-                // Add FA collections
+                // Add FA collections (strict check: decimals must not be > 0)
                 (objktData.data?.fa || []).forEach((item) => {
-                    if (item.contract) {
+                    if (!item.contract) return;
+                    const hasDecimals = (item.tokens || []).some(
+                        (t) => t.decimals !== undefined && t.decimals !== null && t.decimals > 0
+                    );
+
+                    if (!hasDecimals) {
                         enrichedMap.set(item.contract, {
                             name: item.name,
                             description: item.description,
                             logo: formatIpfsUrl(item.logo),
                             items: item.items,
+                            hasDecimals: false,
                             previewTokens: (item.tokens || []).map((t) => ({
                                 tokenId: t.token_id,
                                 name: t.name,
@@ -174,17 +199,28 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                                 thumbnailUri: formatIpfsUrl(t.thumbnail_uri || t.display_uri),
                             })),
                         });
+                    } else {
+                        enrichedMap.set(item.contract, { hasDecimals: true });
                     }
                 });
 
                 // Add / override with Contract Galleries (e.g. Flowers for Piero)
                 (objktData.data?.contractGalleries || []).forEach((item) => {
-                    if (item.gallery_id && item.gallery_id.startsWith("KT1")) {
+                    if (!item.gallery_id || !item.gallery_id.startsWith("KT1")) return;
+                    const hasDecimals = (item.tokens || []).some(
+                        (t) =>
+                            t.token?.decimals !== undefined &&
+                            t.token?.decimals !== null &&
+                            t.token.decimals > 0
+                    );
+
+                    if (!hasDecimals) {
                         enrichedMap.set(item.gallery_id, {
                             name: item.name,
                             description: item.description,
                             logo: formatIpfsUrl(item.logo),
                             items: item.items,
+                            hasDecimals: false,
                             previewTokens: (item.tokens || []).map((t) => ({
                                 tokenId: t.token?.token_id || "",
                                 name: t.token?.name,
@@ -192,6 +228,8 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                                 thumbnailUri: formatIpfsUrl(t.token?.thumbnail_uri || t.token?.display_uri),
                             })),
                         });
+                    } else {
+                        enrichedMap.set(item.gallery_id, { hasDecimals: true });
                     }
                 });
             } catch (err) {
@@ -199,7 +237,7 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
             }
         }
 
-        // Process TzKT contracts
+        // Process TzKT contracts with strict art-only validation
         const collections: DiscoveredCollection[] = [];
         const seenAddresses = new Set<string>();
 
@@ -208,6 +246,7 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                 const tzktContracts = (await tzktRes.value.json()) as Array<{
                     address?: string;
                     alias?: string;
+                    kind?: string;
                     tzips?: string[];
                     tokensCount?: number;
                     firstActivityTime?: string;
@@ -220,14 +259,32 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
 
                 for (const c of tzktContracts) {
                     if (!c.address) continue;
-                    seenAddresses.add(c.address);
 
-                    const enriched = enrichedMap.get(c.address);
+                    // 1. Must be an asset contract, NOT a generic smart_contract (multisigs, pools, etc.)
+                    if (c.kind !== "asset") continue;
+
+                    // 2. Must have actual tokens (> 0)
+                    if (!c.tokensCount || c.tokensCount <= 0) continue;
+
+                    // 3. Must support FA2 / tzip-12 or ALEATORY-001 standard
+                    const tzips = c.tzips || [];
                     const interfaces = c.metadata?.interfaces || [];
                     const isAleatory =
                         interfaces.includes("ALEATORY-001") ||
-                        (c.alias?.toLowerCase().includes("aleatory") ?? false) ||
-                        (enriched?.name?.toLowerCase().includes("aleatory") ?? false);
+                        (c.alias?.toLowerCase().includes("aleatory") ?? false);
+
+                    const isFA2 = tzips.includes("fa2") || tzips.includes("tzip-12");
+                    if (!isFA2 && !isAleatory) continue;
+
+                    // 4. Must NOT have decimals > 0 (DAO coins, fungibles)
+                    const enriched = enrichedMap.get(c.address);
+                    if (enriched?.hasDecimals) continue;
+
+                    // 5. Exclude obvious fungible/coin aliases from display
+                    const aliasLower = (c.alias || "").toLowerCase();
+                    if (aliasLower.includes("coin") || aliasLower.includes("dao")) continue;
+
+                    seenAddresses.add(c.address);
 
                     const finalName =
                         enriched?.name ||
@@ -241,8 +298,11 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                         alias: c.alias,
                         description: enriched?.description || c.metadata?.description,
                         logo: enriched?.logo,
-                        isAleatory,
-                        tokensCount: enriched?.items !== undefined ? enriched.items : (c.tokensCount || 0),
+                        isAleatory:
+                            isAleatory ||
+                            (enriched?.name?.toLowerCase().includes("aleatory") ?? false),
+                        tokensCount:
+                            enriched?.items !== undefined ? enriched.items : (c.tokensCount || 0),
                         tzips: c.tzips || [],
                         createdAt: c.firstActivityTime,
                         previewTokens: enriched?.previewTokens,
@@ -253,9 +313,9 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
             }
         }
 
-        // Also add any Objkt FA collections not originated directly by creator address (e.g. created through factory)
+        // Also add any Objkt FA collections not originated directly by creator address (e.g. factory/marketplace created)
         enrichedMap.forEach((enriched, contract) => {
-            if (!seenAddresses.has(contract)) {
+            if (!seenAddresses.has(contract) && !enriched.hasDecimals && (enriched.items || 0) > 0) {
                 seenAddresses.add(contract);
                 collections.push({
                     address: contract,
@@ -288,6 +348,7 @@ export async function fetchUserCurations(address: string): Promise<DiscoveredCur
                 where: {
                     curators: { curator_address: { _eq: $address } }
                     _not: { gallery_id: { _like: "KT1%" } }
+                    items: { _gt: 0 }
                 }
                 order_by: { inserted_at: desc }
                 limit: 50
