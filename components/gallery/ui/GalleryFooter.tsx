@@ -19,14 +19,13 @@ export default function GalleryFooter() {
         : "#09090b";
 
     return (
-        <div className={`fixed z-40 pointer-events-none bottom-4 right-2 sm:right-4 ${styleConfig.typography.fontFamily}`}>
+        <div className={`fixed z-40 pointer-events-none bottom-4 right-4 hidden xl:block ${styleConfig.typography.fontFamily}`}>
             <div
                 style={{ backgroundColor: solidBg }}
-                className={`px-2 py-1.5 border rounded-lg pointer-events-auto sm:px-3 sm:py-2 shadow-lg transition-colors duration-200 ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}`}
+                className={`px-3 py-2 border rounded-lg pointer-events-auto shadow-lg transition-colors duration-200 ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}`}
             >
                 <span className="text-xs whitespace-nowrap">
-                    <span className="hidden sm:inline">© {displayYear} colleKT. All rights reserved. a </span>
-                    <span className="sm:hidden">© {displayYear} </span>
+                    <span>© {displayYear} colleKT. All rights reserved. a </span>
                     <Link
                         href="https://fafolab.xyz"
                         className="underline transition-colors opacity-90 underline-offset-2 hover:opacity-100 font-medium"
@@ -36,8 +35,7 @@ export default function GalleryFooter() {
                     >
                         FAFO <span className="line-through">lab</span>
                     </Link>
-                    <span className="hidden sm:inline"> joint</span>
-                    <span className="sm:hidden"> joint</span>
+                    <span> joint</span>
                 </span>
             </div>
         </div>

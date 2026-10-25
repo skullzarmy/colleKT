@@ -689,55 +689,53 @@ export default function UnifiedGallery({
         <div className="relative min-h-screen bg-black">
             {/* Header (hidden in embed mode) */}
             {!isEmbed && (
-                <>
-                    <div className="absolute z-50 top-4 left-4">
+                <header className="absolute top-0 left-0 right-0 z-50 p-3 sm:p-4 flex items-center justify-between gap-2 pointer-events-none">
+                    <div className="pointer-events-auto">
                         <Button
                             onClick={() => router.push("/")}
                             variant="outline"
-                            className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px]"
+                            className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px] px-3 text-xs sm:text-sm"
                             aria-label="Back to home"
                         >
-                            <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
+                            <ArrowLeft className="w-4 h-4 mr-1.5 sm:mr-2" aria-hidden="true" />
                             Back
                         </Button>
                     </div>
 
-                    <div className="absolute z-50 top-4 right-4">
-                        <div className="flex items-center gap-2">
-                            <div className="px-4 py-2 text-sm text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm font-medium">
-                                {getHeaderInfoText()}
-                            </div>
-                            <Button
-                                onClick={handleRefresh}
-                                variant="outline"
-                                className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px]"
-                                disabled={loading}
-                                title="Refresh collection and rebuild cache"
-                                aria-label="Refresh collection and rebuild cache"
-                            >
-                                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
-                            </Button>
-                            {!isMobile && (
-                                <Button
-                                    onClick={() => {
-                                        setGalleryError(null);
-                                        setUse3D(!use3D);
-                                    }}
-                                    variant="outline"
-                                    className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px]"
-                                    aria-label={use3D ? "Switch to 2D accessible grid view" : "Switch to 3D immersive gallery view"}
-                                >
-                                    {use3D ? "Switch to 2D" : "Switch to 3D"}
-                                </Button>
-                            )}
-                            {isMobile && (
-                                <div className="px-3 py-1 text-xs text-white/70 rounded bg-black/50 backdrop-blur-sm">
-                                    Mobile 2D Mode
-                                </div>
-                            )}
+                    <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
+                        <div className="px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm font-medium whitespace-nowrap">
+                            {getHeaderInfoText()}
                         </div>
+                        <Button
+                            onClick={handleRefresh}
+                            variant="outline"
+                            className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px] min-w-[36px] p-2"
+                            disabled={loading}
+                            title="Refresh collection and rebuild cache"
+                            aria-label="Refresh collection and rebuild cache"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
+                        </Button>
+                        {!isMobile && (
+                            <Button
+                                onClick={() => {
+                                    setGalleryError(null);
+                                    setUse3D(!use3D);
+                                }}
+                                variant="outline"
+                                className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px] px-2.5 sm:px-3 text-xs sm:text-sm whitespace-nowrap"
+                                aria-label={use3D ? "Switch to 2D accessible grid view" : "Switch to 3D immersive gallery view"}
+                            >
+                                {use3D ? "Switch to 2D" : "Switch to 3D"}
+                            </Button>
+                        )}
+                        {isMobile && (
+                            <div className="px-2.5 py-1 text-xs text-white/70 rounded bg-black/50 backdrop-blur-sm whitespace-nowrap">
+                                Mobile 2D Mode
+                            </div>
+                        )}
                     </div>
-                </>
+                </header>
             )}
 
             {/* 3D Gallery with Error Boundary - Desktop only */}

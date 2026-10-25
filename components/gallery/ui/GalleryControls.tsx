@@ -36,13 +36,13 @@ export default function GalleryControls() {
         : "focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
 
     return (
-        <div className={`fixed z-40 pointer-events-auto bottom-4 left-4 ${styleConfig.typography.fontFamily}`}>
+        <div className={`fixed z-40 pointer-events-auto bottom-3 left-3 sm:bottom-4 sm:left-4 ${styleConfig.typography.fontFamily}`}>
             <div
                 style={{ backgroundColor: solidBg }}
-                className={`flex flex-col items-start gap-2 px-3 py-2 border rounded-xl xl:flex-row xl:items-center shadow-2xl transition-colors duration-200 ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}`}
+                className={`flex flex-row items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 border rounded-xl shadow-2xl transition-colors duration-200 ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}`}
             >
                 {/* Camera Mode Buttons */}
-                <div className="flex items-center gap-1.5" role="group" aria-label="Camera perspective">
+                <div className="flex items-center gap-1 sm:gap-1.5" role="group" aria-label="Camera perspective">
                     <Button
                         onClick={() => setCameraMode("walk")}
                         variant="secondary"
@@ -53,11 +53,11 @@ export default function GalleryControls() {
                                 ? { backgroundColor: styleConfig.ui.accentColor, color: styleConfig.ui.isLight ? "#ffffff" : "#000000" }
                                 : {}
                         }
-                        className={`transition-all duration-200 min-h-[36px] flex items-center justify-center gap-1.5 ${focusRingClasses} ${
+                        className={`transition-all duration-200 min-h-[32px] sm:min-h-[36px] flex items-center justify-center gap-1 sm:gap-1.5 ${focusRingClasses} ${
                             cameraMode === "walk"
                                 ? "font-semibold border-transparent"
                                 : inactiveBtnClasses
-                        } px-2.5 py-1.5`}
+                        } px-2 sm:px-2.5 py-1 sm:py-1.5`}
                         title="Walk Mode - WASD to move, Q/E to turn"
                         aria-label="First person walk mode"
                     >
@@ -75,11 +75,11 @@ export default function GalleryControls() {
                                 ? { backgroundColor: styleConfig.ui.accentColor, color: styleConfig.ui.isLight ? "#ffffff" : "#000000" }
                                 : {}
                         }
-                        className={`transition-all duration-200 min-h-[36px] flex items-center justify-center gap-1.5 ${focusRingClasses} ${
+                        className={`transition-all duration-200 min-h-[32px] sm:min-h-[36px] flex items-center justify-center gap-1 sm:gap-1.5 ${focusRingClasses} ${
                             cameraMode === "overview"
                                 ? "font-semibold border-transparent"
                                 : inactiveBtnClasses
-                        } px-2.5 py-1.5`}
+                        } px-2 sm:px-2.5 py-1 sm:py-1.5`}
                         title="Overview Mode - Fixed overhead view"
                         aria-label="Bird's eye overview mode"
                     >
@@ -90,7 +90,7 @@ export default function GalleryControls() {
 
                 {/* Divider */}
                 <div
-                    className={`hidden w-px h-6 xl:block ${styleConfig.ui.isLight ? "bg-zinc-300" : "bg-zinc-700/80"}`}
+                    className={`hidden sm:block w-px h-5 ${styleConfig.ui.isLight ? "bg-zinc-300" : "bg-zinc-700/80"}`}
                     aria-hidden="true"
                 />
 
@@ -100,14 +100,14 @@ export default function GalleryControls() {
                         <Button
                             variant="secondary"
                             size="sm"
-                            className={`min-h-[36px] ${inactiveBtnClasses} px-2.5 py-1.5 flex items-center gap-1.5 ${focusRingClasses}`}
+                            className={`min-h-[32px] sm:min-h-[36px] ${inactiveBtnClasses} px-2 sm:px-2.5 py-1 sm:py-1.5 flex items-center gap-1 sm:gap-1.5 ${focusRingClasses}`}
                             aria-label={`Current environment style: ${styleConfig.name}. Open style switcher menu`}
                         >
                             <Palette
                                 className={`w-3.5 h-3.5 ${styleConfig.ui.isLight ? "text-zinc-700" : "text-zinc-300"}`}
                                 aria-hidden="true"
                             />
-                            <span className="text-xs font-medium">{styleConfig.name}</span>
+                            <span className="text-xs font-medium max-w-[80px] sm:max-w-none truncate">{styleConfig.name}</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -163,16 +163,16 @@ export default function GalleryControls() {
 
                 {/* Divider */}
                 <div
-                    className={`hidden w-px h-6 xl:block ${styleConfig.ui.isLight ? "bg-zinc-300" : "bg-zinc-700/80"}`}
+                    className={`hidden sm:block w-px h-5 ${styleConfig.ui.isLight ? "bg-zinc-300" : "bg-zinc-700/80"}`}
                     aria-hidden="true"
                 />
 
                 {/* Animation Toggle */}
                 <AnimationToggle />
 
-                {/* Controls Info */}
+                {/* Controls Info - Only on large viewports so it doesn't collide with room navigation */}
                 <div
-                    className={`ml-1 text-xs hidden md:block ${
+                    className={`ml-1 text-xs hidden 2xl:block whitespace-nowrap ${
                         styleConfig.ui.isLight ? "text-zinc-700 font-medium" : "text-zinc-300 opacity-80"
                     }`}
                 >
