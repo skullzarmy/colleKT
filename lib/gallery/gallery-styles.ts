@@ -149,7 +149,7 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             textTransform: "none",
             titleColor: "#18181b", // High-contrast matte black on white wall
             placardColor: "#27272a", // Charcoal label
-            accentTextColor: "#2563eb",
+            accentTextColor: "#1d4ed8",
             panelBg: "bg-white/90 backdrop-blur-md shadow-lg",
             panelBorder: "border-zinc-200",
             panelText: "text-zinc-900",
@@ -196,7 +196,7 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             textTransform: "none",
             titleColor: "#3b2a1d", // Deep espresso/bronze on linen wall
             placardColor: "#4a3728", // Warm dark walnut label
-            accentTextColor: "#b45309",
+            accentTextColor: "#92400e",
             panelBg: "bg-[#fcfaf6]/95 backdrop-blur-md shadow-md",
             panelBorder: "border-[#e5ded3]",
             panelText: "text-[#382b20]",

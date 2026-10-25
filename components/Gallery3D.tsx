@@ -109,7 +109,6 @@ export default function Gallery3D({
                         displayName={displayName}
                         position={[0, 15, -20]}
                         fontSize={2.0}
-                        color="#00bcd4"
                     />
                     <GalleryRoom
                         nfts={currentRoomNFTs}
