@@ -20,7 +20,6 @@ import {
     CheckCircle2,
     AlertCircle,
     Loader2,
-    Sparkles,
     Code,
     Coins,
     Copy,
@@ -36,6 +35,7 @@ import {
     PLATFORM_REFERRER,
 } from "@/lib/tezos/market-service";
 import AleatoryFrame from "@/components/aleatory/AleatoryFrame";
+import AleatoryLogo from "@/components/aleatory/AleatoryLogo";
 import {
     fetchAleatoryCode,
     fetchAleatorySaleInfo,
@@ -947,7 +947,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                                 : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
                                         }
                                     >
-                                        <Sparkles size={13} className="mr-1.5 text-cyan-300" />
+                                        <AleatoryLogo size={15} className="mr-1.5" />
                                         Live Render
                                     </Button>
                                     <Button
@@ -1136,7 +1136,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                         aria-pressed={viewMode === "live"}
                                         className="text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
                                     >
-                                        <Sparkles size={13} className="mr-1.5 text-cyan-300" />
+                                        <AleatoryLogo size={15} className="mr-1.5" />
                                         Live Render
                                     </Button>
                                     <Button
@@ -1399,7 +1399,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     <div className="p-4 rounded-lg bg-zinc-900/90 border border-cyan-900/50 space-y-3.5">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5 text-sm font-semibold text-cyan-300">
-                                                <Sparkles size={16} className="text-cyan-400" />
+                                                <AleatoryLogo size={20} className="mr-0.5" />
                                                 <span>Aleatory</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
@@ -1732,7 +1732,11 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between">
                                             <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
-                                                <Sparkles size={14} className="text-cyan-400" />
+                                                {isAleatory ? (
+                                                    <AleatoryLogo size={16} className="mr-0.5" />
+                                                ) : (
+                                                    <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                                                )}
                                                 <span>Generative Parameters</span>
                                                 {isAleatory && (
                                                     <Badge variant="outline" className="ml-1 text-[10px] text-cyan-300 border-cyan-800 bg-cyan-950/40">
