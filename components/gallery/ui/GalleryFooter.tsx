@@ -8,9 +8,22 @@ export default function GalleryFooter() {
     const currentYear = new Date().getFullYear();
     const displayYear = currentYear === 2025 ? currentYear : `2025-${currentYear}`;
 
+    const solidBg = styleConfig.ui.isLight
+        ? styleConfig.id === "warm-solarium"
+            ? "#fcfaf6"
+            : "#ffffff"
+        : styleConfig.id === "cyberpunk-neon"
+        ? "#080914"
+        : styleConfig.id === "minimal-spotlight"
+        ? "#18191d"
+        : "#09090b";
+
     return (
         <div className={`fixed z-40 pointer-events-none bottom-4 right-2 sm:right-4 ${styleConfig.typography.fontFamily}`}>
-            <div className={`px-2 py-1.5 border rounded-lg pointer-events-auto sm:px-3 sm:py-2 shadow-lg transition-colors duration-200 ${styleConfig.typography.panelBg} ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}`}>
+            <div
+                style={{ backgroundColor: solidBg }}
+                className={`px-2 py-1.5 border rounded-lg pointer-events-auto sm:px-3 sm:py-2 shadow-lg transition-colors duration-200 ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}`}
+            >
                 <span className="text-xs whitespace-nowrap">
                     <span className="hidden sm:inline">© {displayYear} colleKT. All rights reserved. a </span>
                     <span className="sm:hidden">© {displayYear} </span>

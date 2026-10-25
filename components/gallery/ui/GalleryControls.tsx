@@ -17,6 +17,16 @@ import { GALLERY_STYLES, type GalleryStyleId } from "@/lib/gallery/gallery-style
 export default function GalleryControls() {
     const { cameraMode, setCameraMode, currentStyle, setStyle, styleConfig } = useViewState();
 
+    const solidBg = styleConfig.ui.isLight
+        ? styleConfig.id === "warm-solarium"
+            ? "#fcfaf6"
+            : "#ffffff"
+        : styleConfig.id === "cyberpunk-neon"
+        ? "#080914"
+        : styleConfig.id === "minimal-spotlight"
+        ? "#18191d"
+        : "#09090b";
+
     const inactiveBtnClasses = styleConfig.ui.isLight
         ? "bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border-zinc-300"
         : "bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 border-zinc-700";
@@ -28,7 +38,8 @@ export default function GalleryControls() {
     return (
         <div className={`fixed z-40 pointer-events-auto bottom-4 left-4 ${styleConfig.typography.fontFamily}`}>
             <div
-                className={`flex flex-col items-start gap-2 px-3 py-2 border rounded-xl xl:flex-row xl:items-center shadow-2xl transition-colors duration-200 ${styleConfig.typography.panelBg} ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}`}
+                style={{ backgroundColor: solidBg }}
+                className={`flex flex-col items-start gap-2 px-3 py-2 border rounded-xl xl:flex-row xl:items-center shadow-2xl transition-colors duration-200 ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}`}
             >
                 {/* Camera Mode Buttons */}
                 <div className="flex items-center gap-1.5" role="group" aria-label="Camera perspective">
@@ -102,7 +113,8 @@ export default function GalleryControls() {
                     <DropdownMenuContent
                         align="start"
                         side="top"
-                        className={`w-56 p-1.5 mb-2 shadow-2xl ${styleConfig.typography.panelBg} ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText} ${styleConfig.typography.fontFamily}`}
+                        style={{ backgroundColor: solidBg }}
+                        className={`w-56 p-1.5 mb-2 shadow-2xl ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText} ${styleConfig.typography.fontFamily}`}
                     >
                         <DropdownMenuLabel
                             className={`px-2 py-1 text-xs font-semibold ${
@@ -119,7 +131,7 @@ export default function GalleryControls() {
                                 key={style.id}
                                 onClick={() => setStyle(style.id as GalleryStyleId)}
                                 aria-current={currentStyle === style.id ? "true" : undefined}
-                                className={`flex items-center justify-between px-2 py-2 text-xs rounded cursor-pointer transition-colors ${
+                                className={`flex items-center justify-between px-2.5 py-2 text-xs rounded-md cursor-pointer transition-colors ${
                                     styleConfig.ui.isLight
                                         ? "hover:bg-zinc-100 focus:bg-zinc-100 text-zinc-900"
                                         : "hover:bg-zinc-800 focus:bg-zinc-800 text-zinc-100"
@@ -127,7 +139,9 @@ export default function GalleryControls() {
                             >
                                 <div className="flex items-center gap-2">
                                     <span
-                                        className="w-3.5 h-3.5 rounded-full border border-zinc-500 shadow-sm flex-shrink-0"
+                                        className={`w-3.5 h-3.5 rounded-full border shadow-sm flex-shrink-0 ${
+                                            styleConfig.ui.isLight ? "border-zinc-400" : "border-zinc-600"
+                                        }`}
                                         style={{ backgroundColor: style.swatchColor }}
                                         aria-hidden="true"
                                     />

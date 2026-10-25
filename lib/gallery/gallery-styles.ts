@@ -103,7 +103,7 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             titleColor: "#f4f4f5", // Crisp museum white on dark wall
             placardColor: "#d4d4d8", // Clean readable label
             accentTextColor: "#00bcd4",
-            panelBg: "bg-zinc-950/85 backdrop-blur-md",
+            panelBg: "bg-zinc-950",
             panelBorder: "border-zinc-800",
             panelText: "text-zinc-100",
         },
@@ -150,8 +150,8 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             titleColor: "#18181b", // High-contrast matte black on white wall
             placardColor: "#27272a", // Charcoal label
             accentTextColor: "#1d4ed8",
-            panelBg: "bg-white/90 backdrop-blur-md shadow-lg",
-            panelBorder: "border-zinc-200",
+            panelBg: "bg-white shadow-xl",
+            panelBorder: "border-zinc-300",
             panelText: "text-zinc-900",
         },
     },
@@ -197,9 +197,9 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             titleColor: "#3b2a1d", // Deep espresso/bronze on linen wall
             placardColor: "#4a3728", // Warm dark walnut label
             accentTextColor: "#92400e",
-            panelBg: "bg-[#fcfaf6]/95 backdrop-blur-md shadow-md",
-            panelBorder: "border-[#e5ded3]",
-            panelText: "text-[#382b20]",
+            panelBg: "bg-[#fcfaf6] shadow-xl",
+            panelBorder: "border-[#dcd5c9]",
+            panelText: "text-[#2d2219]",
         },
     },
     "minimal-spotlight": {
@@ -244,9 +244,9 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             titleColor: "#f1f5f9", // Crisp white on concrete
             placardColor: "#e2e8f0", // Slate-200 technical label
             accentTextColor: "#f59e0b",
-            panelBg: "bg-[#17181c]/90 backdrop-blur-md",
+            panelBg: "bg-[#18191d] shadow-xl",
             panelBorder: "border-zinc-700",
-            panelText: "text-zinc-200",
+            panelText: "text-zinc-100",
         },
     },
     "cyberpunk-neon": {
@@ -291,9 +291,9 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             titleColor: "#00f0ff", // Radiant electric cyan
             placardColor: "#38bdf8", // Sky cyan HUD label
             accentTextColor: "#ff007f",
-            panelBg: "bg-[#080914]/90 backdrop-blur-md shadow-[0_0_20px_rgba(0,240,255,0.15)]",
-            panelBorder: "border-cyan-500/50",
-            panelText: "text-cyan-200",
+            panelBg: "bg-[#080914] shadow-[0_0_25px_rgba(0,240,255,0.25)]",
+            panelBorder: "border-cyan-500",
+            panelText: "text-cyan-100",
         },
     },
 };
