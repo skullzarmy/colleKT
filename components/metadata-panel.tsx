@@ -19,6 +19,7 @@ import {
     Info,
 } from "lucide-react";
 import { UnifiedToken } from "@/lib/data/types/token-types";
+import AleatoryLogo from "@/components/aleatory/AleatoryLogo";
 
 interface MetadataPanelProps {
     nft: UnifiedToken | null;
@@ -41,11 +42,42 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
         }
     };
 
+    const isAleatory = Boolean(
+        nft &&
+        (nft.standard === "aleatory" ||
+            nft.standard === "aleatory-generator" ||
+            nft.metadata?.symbol?.toUpperCase() === "ALEA" ||
+            (nft as any).symbol?.toUpperCase() === "ALEA" ||
+            Boolean(nft.metadata?.aleaSeed) ||
+            Boolean((nft.metadata as any)?.raw?.aleaSeed) ||
+            Boolean(nft.metadata?.aleaCode) ||
+            Boolean((nft.metadata as any)?.raw?.aleaCode) ||
+            Boolean(nft.metadata?.aleaParams) ||
+            Boolean((nft.metadata as any)?.raw?.aleaParams) ||
+            Boolean(nft.metadata?.aleaCodeHash) ||
+            Boolean((nft.metadata as any)?.raw?.aleaCodeHash) ||
+            nft.metadata?.tags?.some((t) => t.toLowerCase().includes("aleatory")) ||
+            nft.contractAlias?.toLowerCase().includes("aleatory"))
+    );
+
+    const isGenerator = Boolean(
+        nft &&
+        (nft.standard === "aleatory-generator" ||
+            !nft.tokenId ||
+            ((nft.metadata as any)?.type?.toLowerCase() === "generator" && !nft.tokenId))
+    );
+
     const isHtmlContent = (uri?: string): boolean => {
         if (!uri) return false;
         const lowerUri = uri.toLowerCase();
-        const htmlIndicators = [".html", "text/html", "<html", "<!doctype"];
-        return htmlIndicators.some((indicator) => lowerUri.includes(indicator));
+        const htmlIndicators = [".html", "text/html", "<html", "<!doctype", "fxhash", "editart", "?m0=", "&m0="];
+        if (htmlIndicators.some((indicator) => lowerUri.includes(indicator))) return true;
+        if (
+            nft.metadata?.symbol?.toUpperCase() === "EDITART" ||
+            (nft as any).symbol?.toUpperCase() === "EDITART" ||
+            nft.contractAlias?.toLowerCase().includes("editart")
+        ) return true;
+        return false;
     };
 
     const hasInteractiveContent = (): boolean => {
@@ -84,7 +116,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
     const getIPFSUrl = (uri: string) => {
         if (uri.startsWith("ipfs://")) {
             // Extract CID and preserve any query parameters
-            const withoutProtocol = uri.replace("ipfs://", "");
+            const withoutProtocol = uri.replace("ipfs://", "").replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
             return `https://ipfs.fileship.xyz/${withoutProtocol}`;
         }
         return uri;
@@ -107,7 +139,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                 onClick={() => setShowInteractive(false)}
                                 variant="outline"
                                 size="sm"
-                                className="text-gray-300 border-gray-600 hover:bg-gray-800"
+                                className="text-zinc-200 hover:text-white border-zinc-700 hover:bg-zinc-800"
                             >
                                 Back to Details
                             </Button>
@@ -284,20 +316,41 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                     </Button>
                                 )}
 
-                                <Button
-                                    onClick={() =>
-                                        window.open(
-                                            `https://objkt.com/tokens/${nft.contractAddress}/${nft.tokenId}?ref=tz1ZzSmVcnVaWNZKJradtrDnjSjzTp6qjTEW`,
-                                            "_blank"
-                                        )
-                                    }
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-gray-300 border-gray-600 hover:bg-gray-800"
-                                >
-                                    <ExternalLink className="w-4 h-4 mr-2" />
-                                    View on Objkt
-                                </Button>
+                                {isAleatory ? (
+                                    <Button
+                                        onClick={() =>
+                                            window.open(
+                                                isGenerator || !nft.tokenId
+                                                    ? `https://aleatory.art/generator/${nft.contractAddress}`
+                                                    : `https://aleatory.art/piece/${nft.contractAddress}/${nft.tokenId}`,
+                                                "_blank"
+                                            )
+                                        }
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-cyan-300 hover:text-white border-cyan-800 bg-cyan-950/40 hover:bg-cyan-900/60"
+                                    >
+                                        <AleatoryLogo size={16} className="mr-2" />
+                                        {isGenerator || !nft.tokenId
+                                            ? "View Generator on Aleatory.art"
+                                            : "View Piece on Aleatory.art"}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        onClick={() =>
+                                            window.open(
+                                                `https://objkt.com/tokens/${nft.contractAddress}/${nft.tokenId}?ref=tz1ZzSmVcnVaWNZKJradtrDnjSjzTp6qjTEW`,
+                                                "_blank"
+                                            )
+                                        }
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-zinc-200 hover:text-white border-zinc-700 hover:bg-zinc-800"
+                                    >
+                                        <ExternalLink className="w-4 h-4 mr-2" />
+                                        View on Objkt
+                                    </Button>
+                                )}
 
                                 {nft.metadata?.artifactUri && (
                                     <Button
@@ -309,7 +362,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                         }}
                                         variant="outline"
                                         size="sm"
-                                        className="text-gray-300 border-gray-600 hover:bg-gray-800"
+                                        className="text-zinc-200 hover:text-white border-zinc-700 hover:bg-zinc-800"
                                     >
                                         <ExternalLink className="w-4 h-4 mr-2" />
                                         Original File

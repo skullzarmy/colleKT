@@ -8,7 +8,7 @@
 /**
  * Supported token standards
  */
-export type TokenStandard = "fa1.2" | "fa2" | "fa1.2-single-asset" | "fa2-single-asset" | "fa2-multi-asset" | "unknown";
+export type TokenStandard = "fa1.2" | "fa2" | "fa1.2-single-asset" | "fa2-single-asset" | "fa2-multi-asset" | "aleatory" | "aleatory-generator" | "unknown";
 
 /**
  * Data source identification
@@ -58,6 +58,14 @@ export interface UnifiedMetadata {
 
     // Supply information
     supply?: number | string;
+
+    // Aleatory (ALEATORY-001) generative metadata
+    aleaSeed?: string;
+    aleaParams?: string | Record<string, unknown>;
+    aleaCode?: string;
+    aleaCodeHash?: string;
+    aleaProvider?: string;
+    aleaCodeEncoding?: string;
 
     // Utility token indicators
     shouldPreferSymbol?: boolean;

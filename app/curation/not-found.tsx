@@ -28,7 +28,7 @@ export default function CurationNotFound() {
                             Search Again
                         </Link>
                     </Button>
-                    <Button asChild variant="outline" className="text-white border-white/20 hover:bg-white/10">
+                    <Button asChild variant="outline" className="text-white hover:text-white border-white/20 hover:bg-white/10">
                         <Link href="/gallery">
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Browse Galleries

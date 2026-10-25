@@ -8,6 +8,7 @@ import MediaContent from "./MediaContent";
 import { sanitizeNFTName, getDynamicFontSize, splitTextForDisplay } from "../lib/text-utils";
 import { UnifiedToken } from "../lib/data/types/token-types";
 import { detectMediaType } from "../lib/media-utils";
+import { useViewState } from "@/contexts/ViewStateContext";
 
 interface NFTFrameProps {
     nft: UnifiedToken;
@@ -28,6 +29,7 @@ export default function NFTFrame({
     preloadedTexture,
     aspectRatio = 1, // Default to square if no aspect ratio provided
 }: NFTFrameProps) {
+    const { styleConfig, prefersReducedMotion } = useViewState();
     const meshRef = useRef<THREE.Mesh>(null);
     const frameRef = useRef<THREE.Group>(null);
     const [hovered, setHovered] = useState(false);
@@ -164,11 +166,11 @@ export default function NFTFrame({
     const frameBorderWidth = frameWidth + borderSize;
     const frameBorderHeight = frameHeight + borderSize;
 
-    // Simple animation - no proximity bullshit!
+    // Simple animation - with prefers-reduced-motion check
     useFrame((state) => {
         if (frameRef.current) {
-            // Subtle floating animation only when hovered or selected
-            if (hovered || isSelected) {
+            // Subtle floating animation only when hovered or selected, and reduced motion is off
+            if ((hovered || isSelected) && !prefersReducedMotion) {
                 frameRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 2) * 0.05;
             } else {
                 frameRef.current.position.y = position[1];
@@ -193,9 +195,27 @@ export default function NFTFrame({
             <mesh position={[0, 0, -0.05]} castShadow>
                 <boxGeometry args={[frameBorderWidth, frameBorderHeight, 0.15]} />
                 <meshStandardMaterial
-                    color={isSelected ? "#00bcd4" : hovered ? "#555" : "#333"}
-                    roughness={0.2}
-                    metalness={0.8}
+                    color={
+                        isSelected
+                            ? styleConfig.frames.selectedColor
+                            : hovered
+                            ? styleConfig.frames.hoverColor
+                            : styleConfig.frames.borderColor
+                    }
+                    emissive={
+                        isSelected
+                            ? styleConfig.frames.selectedColor
+                            : hovered
+                            ? styleConfig.frames.hoverColor
+                            : styleConfig.id === "cyberpunk-neon"
+                            ? styleConfig.frames.borderColor
+                            : "#000000"
+                    }
+                    emissiveIntensity={
+                        isSelected ? 0.6 : hovered ? 0.35 : styleConfig.id === "cyberpunk-neon" ? 0.2 : 0
+                    }
+                    roughness={styleConfig.frames.roughness}
+                    metalness={styleConfig.frames.metalness}
                 />
             </mesh>
 
@@ -220,21 +240,32 @@ export default function NFTFrame({
                 const textLines = splitTextForDisplay(sanitizedName, 25);
                 const fontSize = getDynamicFontSize(sanitizedName, 0.2);
 
-                return textLines.map((line, index) => (
-                    <Text
-                        key={index}
-                        position={[0, -(frameBorderHeight / 2 + 0.3 + index * fontSize * 1.2), 0.1]}
-                        fontSize={fontSize}
-                        color={isSelected ? "#00bcd4" : "#ffffff"}
-                        anchorX="center"
-                        anchorY="top"
-                        maxWidth={Math.max(frameWidth, 2.5)}
-                        outlineWidth={0.01}
-                        outlineColor="#000000"
-                    >
-                        {line}
-                    </Text>
-                ));
+                return textLines.map((line, index) => {
+                    const formattedLine =
+                        styleConfig.typography.textTransform === "uppercase" ? line.toUpperCase() : line;
+                    return (
+                        <Text
+                            key={index}
+                            position={[0, -(frameBorderHeight / 2 + 0.3 + index * fontSize * 1.2), 0.1]}
+                            fontSize={fontSize}
+                            color={isSelected ? styleConfig.frames.selectedColor : styleConfig.typography.placardColor}
+                            anchorX="center"
+                            anchorY="top"
+                            maxWidth={Math.max(frameWidth, 2.5)}
+                            outlineWidth={0.01}
+                            outlineColor={styleConfig.ui.isLight ? "#ffffff" : "#000000"}
+                            letterSpacing={
+                                styleConfig.typography.letterSpacing === "tracking-widest"
+                                    ? 0.08
+                                    : styleConfig.typography.letterSpacing === "tracking-wide"
+                                    ? 0.04
+                                    : 0
+                            }
+                        >
+                            {formattedLine}
+                        </Text>
+                    );
+                });
             })()}
 
             {/* Improved hover info */}
@@ -254,7 +285,7 @@ export default function NFTFrame({
                     angle={0.3}
                     penumbra={0.5}
                     intensity={2}
-                    color="#00bcd4"
+                    color={styleConfig.frames.selectedColor}
                 />
             )}
         </group>

@@ -12,6 +12,7 @@
 
 import { objktClient } from "./objkt-client";
 import { UnifiedToken, UnifiedMetadata, TokenStandard, DataSource } from "../types/token-types";
+import { getIPFSUrl } from "@/lib/utils";
 
 /**
  * Token identifier from objkt.com queries
@@ -351,8 +352,8 @@ export class ObjktQueries {
                 description: gallery.description || "",
                 slug: gallery.slug,
                 totalItems,
-                coverUri: gallery.logo, // Use logo as cover image
-                logo: gallery.logo,
+                coverUri: gallery.logo ? getIPFSUrl(gallery.logo) : undefined, // Use logo as cover image
+                logo: gallery.logo ? getIPFSUrl(gallery.logo) : undefined,
                 items: gallery.items,
                 maxItems: gallery.max_items,
                 owners: gallery.owners,
@@ -460,6 +461,23 @@ export class ObjktQueries {
 
             console.log(`📊 Found ${tokenBalanceMap.size} active tokens (with non-zero balances)`);
 
+            // Fetch contract metadata (name, description, creator) once to enrich tokens
+            let contractAlias: string | undefined;
+            let contractDesc: string | undefined;
+            let contractCreator: string | undefined;
+
+            try {
+                const contractRes = await fetch(`https://api.tzkt.io/v1/contracts/${contractAddress}`);
+                if (contractRes.ok) {
+                    const cData = await contractRes.json();
+                    contractAlias = cData.metadata?.name || cData.alias;
+                    contractDesc = cData.metadata?.description;
+                    contractCreator = cData.creator?.address;
+                }
+            } catch (err) {
+                console.warn(`[TzKT] Failed to fetch contract metadata for ${contractAddress}:`, err);
+            }
+
             // Convert active tokens to UnifiedToken format
             const activeTokens: UnifiedToken[] = [];
 
@@ -467,7 +485,7 @@ export class ObjktQueries {
                 try {
                     // Only include tokens that have actual circulating supply
                     if (total > 0) {
-                        const unifiedToken = this.convertTzKTTokenToUnified(token);
+                        const unifiedToken = this.convertTzKTTokenToUnified(token, contractAlias, contractDesc, contractCreator);
                         activeTokens.push(unifiedToken);
                     }
                 } catch (error) {
@@ -489,20 +507,34 @@ export class ObjktQueries {
     /**
      * Convert TzKT token format to UnifiedToken (consistent with data orchestrator)
      */
-    private convertTzKTTokenToUnified(tzktToken: any): UnifiedToken {
+    private convertTzKTTokenToUnified(
+        tzktToken: any,
+        defaultContractAlias?: string,
+        defaultDescription?: string,
+        defaultCreator?: string
+    ): UnifiedToken {
+        const creators = tzktToken?.metadata?.creators || (defaultCreator ? [defaultCreator] : undefined);
+        const description = tzktToken?.metadata?.description || defaultDescription || undefined;
+
         const metadata: UnifiedMetadata = {
             name: tzktToken?.metadata?.name || undefined,
             symbol: tzktToken?.metadata?.symbol || undefined,
             decimals: tzktToken?.metadata?.decimals ? Number(tzktToken.metadata.decimals) : undefined,
-            description: tzktToken?.metadata?.description || undefined,
+            description,
             image: tzktToken?.metadata?.image || undefined,
             artifactUri: tzktToken?.metadata?.artifactUri || undefined,
             displayUri: tzktToken?.metadata?.displayUri || undefined,
             thumbnailUri: tzktToken?.metadata?.thumbnailUri || undefined,
             supply: tzktToken?.totalSupply || tzktToken?.metadata?.supply || undefined,
-            creators: tzktToken?.metadata?.creators || undefined,
+            creators,
             attributes: tzktToken?.metadata?.attributes || undefined,
             formats: tzktToken?.metadata?.formats || undefined,
+            aleaSeed: tzktToken?.metadata?.aleaSeed || undefined,
+            aleaParams: tzktToken?.metadata?.aleaParams || undefined,
+            aleaCode: tzktToken?.metadata?.aleaCode || undefined,
+            aleaCodeHash: tzktToken?.metadata?.aleaCodeHash || undefined,
+            aleaProvider: tzktToken?.metadata?.aleaProvider || undefined,
+            aleaCodeEncoding: tzktToken?.metadata?.aleaCodeEncoding || undefined,
             raw: tzktToken?.metadata || undefined,
         };
 
@@ -528,7 +560,7 @@ export class ObjktQueries {
         const unifiedToken: UnifiedToken = {
             id: `${tzktToken?.contract?.address || "unknown"}_${tzktToken?.tokenId || "0"}`,
             contractAddress: tzktToken?.contract?.address || "unknown",
-            contractAlias: tzktToken?.contract?.alias || undefined,
+            contractAlias: tzktToken?.contract?.alias || defaultContractAlias || undefined,
             tokenId: tzktToken?.tokenId || "0",
             balance: "1", // For collections/curations, we show tokens, not balances
             standard,

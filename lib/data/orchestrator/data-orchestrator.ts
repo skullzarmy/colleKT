@@ -370,6 +370,12 @@ export class DataOrchestrator {
             attributes: token?.metadata?.attributes || undefined,
             // 🔥 CRITICAL FIX: Preserve formats data with MIME types
             formats: token?.metadata?.formats || undefined,
+            aleaSeed: token?.metadata?.aleaSeed || undefined,
+            aleaParams: token?.metadata?.aleaParams || undefined,
+            aleaCode: token?.metadata?.aleaCode || undefined,
+            aleaCodeHash: token?.metadata?.aleaCodeHash || undefined,
+            aleaProvider: token?.metadata?.aleaProvider || undefined,
+            aleaCodeEncoding: token?.metadata?.aleaCodeEncoding || undefined,
             // Store raw metadata for fallback detection
             raw: token?.metadata || undefined,
         };
@@ -445,6 +451,12 @@ export class DataOrchestrator {
             attributes: token?.metadata?.attributes || undefined,
             // 🔥 CRITICAL FIX: Preserve formats data with MIME types
             formats: token?.metadata?.formats || undefined,
+            aleaSeed: token?.metadata?.aleaSeed || undefined,
+            aleaParams: token?.metadata?.aleaParams || undefined,
+            aleaCode: token?.metadata?.aleaCode || undefined,
+            aleaCodeHash: token?.metadata?.aleaCodeHash || undefined,
+            aleaProvider: token?.metadata?.aleaProvider || undefined,
+            aleaCodeEncoding: token?.metadata?.aleaCodeEncoding || undefined,
             // Store raw metadata for fallback detection
             raw: token?.metadata || undefined,
         };
@@ -974,6 +986,12 @@ export class DataOrchestrator {
             creators: tzktToken?.metadata?.creators || undefined,
             attributes: tzktToken?.metadata?.attributes || undefined,
             formats: tzktToken?.metadata?.formats || undefined,
+            aleaSeed: tzktToken?.metadata?.aleaSeed || undefined,
+            aleaParams: tzktToken?.metadata?.aleaParams || undefined,
+            aleaCode: tzktToken?.metadata?.aleaCode || undefined,
+            aleaCodeHash: tzktToken?.metadata?.aleaCodeHash || undefined,
+            aleaProvider: tzktToken?.metadata?.aleaProvider || undefined,
+            aleaCodeEncoding: tzktToken?.metadata?.aleaCodeEncoding || undefined,
             raw: tzktToken?.metadata || undefined,
         };
 

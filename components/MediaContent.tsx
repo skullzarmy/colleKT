@@ -40,10 +40,10 @@ export default function MediaContent({
 
     // Helper function to detect if URI contains HTML content
     const isHtmlContent = (uri: string, mimeType?: string): boolean => {
-        if (mimeType?.includes("text/html")) return true;
+        if (mimeType?.includes("text/html") || mimeType?.includes("application/html")) return true;
 
         const lowerUri = uri.toLowerCase();
-        const htmlIndicators = [".html", "<html", "<!doctype"];
+        const htmlIndicators = [".html", "<html", "<!doctype", "fxhash", "editart", "?m0=", "&m0="];
         return htmlIndicators.some((indicator) => lowerUri.includes(indicator));
     };
 
@@ -273,7 +273,7 @@ export default function MediaContent({
                 // Convert IPFS URIs to gateway URLs, but leave data URIs unchanged
                 let finalUrl = mediaUrl;
                 if (mediaUrl.startsWith("ipfs://")) {
-                    const withoutProtocol = mediaUrl.replace("ipfs://", "");
+                    const withoutProtocol = mediaUrl.replace("ipfs://", "").replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
                     finalUrl = `https://ipfs.fileship.xyz/${withoutProtocol}`;
                 } else if (mediaUrl.startsWith("data:")) {
                     finalUrl = mediaUrl;
@@ -413,14 +413,10 @@ export default function MediaContent({
                 for (const testUri of uriChain) {
                     allUris.push(testUri);
 
-                    // Add IPFS gateway variants for IPFS URIs
+                    // Add IPFS gateway URI using cached multisource fileship.xyz
                     if (testUri.startsWith("ipfs://")) {
-                        const cid = testUri.replace("ipfs://", "");
-                        allUris.push(
-                            `https://ipfs.fileship.xyz/${cid}`,
-                            `https://ipfs.io/ipfs/${cid}`,
-                            `https://cloudflare-ipfs.com/ipfs/${cid}`
-                        );
+                        const cid = testUri.replace("ipfs://", "").replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
+                        allUris.push(`https://ipfs.fileship.xyz/${cid}`);
                     }
                 }
 

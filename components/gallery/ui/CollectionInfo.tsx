@@ -1,3 +1,7 @@
+"use client";
+
+import { useViewState } from "@/contexts/ViewStateContext";
+
 interface CollectionInfoProps {
     totalCollectionNFTs: number;
     currentRoom: number;
@@ -11,10 +15,30 @@ export default function CollectionInfo({
     totalRooms,
     currentRoomNFTCount,
 }: CollectionInfoProps) {
+    const { styleConfig } = useViewState();
+
+    const solidBg = styleConfig.ui.isLight
+        ? styleConfig.id === "warm-solarium"
+            ? "#fcfaf6"
+            : "#ffffff"
+        : styleConfig.id === "cyberpunk-neon"
+        ? "#080914"
+        : styleConfig.id === "minimal-spotlight"
+        ? "#18191d"
+        : "#09090b";
+
     return (
-        <div className="absolute px-4 py-2 text-sm text-white rounded-lg top-4 right-4 bg-black/50 backdrop-blur-sm">
-            Total Collection: {totalCollectionNFTs} NFTs
-            <div className="mt-1 text-xs text-cyan-400">
+        <div
+            style={{ backgroundColor: solidBg }}
+            className={`absolute px-4 py-2.5 text-sm rounded-xl top-4 right-4 border shadow-xl transition-all duration-300 ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText} ${styleConfig.typography.fontFamily}`}
+        >
+            <div className={`font-semibold ${styleConfig.typography.headingFont}`}>
+                Total Collection: {totalCollectionNFTs} NFTs
+            </div>
+            <div
+                className="mt-1 text-xs font-medium"
+                style={{ color: styleConfig.typography.accentTextColor }}
+            >
                 Room {currentRoom + 1} of {totalRooms} • {currentRoomNFTCount} NFTs in this room
             </div>
         </div>

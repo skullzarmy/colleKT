@@ -58,19 +58,20 @@ class ErrorBoundary extends Component<
     }
 }
 
-// Simple 2D Gallery Fallback
+// Simple 2D Gallery Fallback with full WCAG 2.2 AA accessibility
 function Simple2DGallery({
     nfts,
     onNFTSelect,
     getImageUri,
+    onSwitchTo3D,
 }: {
     nfts: UnifiedToken[];
     onNFTSelect: (nft: UnifiedToken) => void;
     getImageUri: (nft: UnifiedToken) => string | null;
+    onSwitchTo3D?: () => void;
 }) {
     const getIPFSUrl = (uri: string) => {
         if (uri.startsWith("ipfs://")) {
-            // Extract CID and preserve any query parameters
             const withoutProtocol = uri.replace("ipfs://", "");
             return `https://ipfs.fileship.xyz/${withoutProtocol}`;
         }
@@ -78,43 +79,66 @@ function Simple2DGallery({
     };
 
     return (
-        <div className="min-h-screen p-8 bg-black">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="min-h-screen p-6 sm:p-8 bg-black text-white pt-20">
+            {onSwitchTo3D && (
+                <div className="max-w-7xl mx-auto mb-6 flex items-center justify-between p-3.5 bg-zinc-900/80 border border-zinc-700 rounded-xl">
+                    <span className="text-xs text-zinc-300">2D Grid View Active</span>
+                    <Button
+                        onClick={onSwitchTo3D}
+                        size="sm"
+                        className="bg-white text-zinc-950 hover:bg-zinc-200 font-bold text-xs min-h-[36px]"
+                    >
+                        Switch to 3D Gallery
+                    </Button>
+                </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 max-w-7xl mx-auto">
                 {nfts.map((nft) => {
                     const imageUri = getImageUri(nft);
+                    const title = nft.metadata?.name || `Token #${nft.tokenId}`;
                     return (
                         <div
                             key={nft.id}
-                            className="overflow-hidden transition-colors bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700"
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`View details for ${title}`}
+                            className="overflow-hidden transition-all bg-zinc-900/90 border-2 border-zinc-700/80 rounded-xl cursor-pointer hover:border-zinc-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none group shadow-md"
                             onClick={() => onNFTSelect(nft)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    onNFTSelect(nft);
+                                }
+                            }}
                         >
-                            <div className="flex items-center justify-center bg-gray-900 aspect-square">
+                            <div className="flex items-center justify-center bg-zinc-950 aspect-square overflow-hidden relative">
                                 {imageUri ? (
                                     <img
                                         src={getIPFSUrl(imageUri)}
-                                        alt={nft.metadata?.name || `Token #${nft.tokenId}`}
-                                        className="object-cover w-full h-full"
+                                        alt={title}
+                                        className="object-cover w-full h-full transition-transform group-hover:scale-105"
                                         crossOrigin="anonymous"
                                         onError={(e) => {
                                             const target = e.target as HTMLImageElement;
                                             target.style.display = "none";
                                             target.parentElement!.innerHTML =
-                                                '<div class="text-white text-center">📷<br/>Image Failed</div>';
+                                                '<div class="text-zinc-300 text-center text-xs p-2">Image Preview Unavailable</div>';
                                         }}
                                     />
                                 ) : (
-                                    <div className="text-center text-white">
-                                        🖼
-                                        <br />
-                                        No Image
+                                    <div className="text-center text-zinc-300 text-xs">
+                                        🖼<br />No Preview
                                     </div>
                                 )}
                             </div>
-                            <div className="p-3">
-                                <h3 className="text-sm font-medium text-white truncate">
-                                    {nft.metadata?.name || `Token #${nft.tokenId}`}
+                            <div className="p-3.5 space-y-1">
+                                <h3 className="text-sm font-bold text-white truncate group-hover:text-cyan-300 transition-colors">
+                                    {title}
                                 </h3>
-                                <p className="mt-1 text-xs text-gray-400">{nft.contractAddress.slice(0, 8)}...</p>
+                                <p className="font-mono text-xs text-zinc-300 truncate">
+                                    {nft.contractAddress.slice(0, 8)}...#{nft.tokenId}
+                                </p>
                             </div>
                         </div>
                     );
@@ -154,6 +178,9 @@ export default function UnifiedGallery({
 
     // Use shared view state instead of local state
     const { cameraMode, setCameraMode } = useViewState();
+
+    // Check for embed mode in URL params
+    const isEmbed = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("embed") === "true";
 
     // Detect gallery type from current pathname
     const getGalleryType = (): "USER" | "CURATION" | "COLLECTION" => {
@@ -415,6 +442,21 @@ export default function UnifiedGallery({
 
                 setNfts(processedNFTs);
 
+                // Check for ?token= URL parameter to autofocus or open that piece
+                if (typeof window !== "undefined") {
+                    try {
+                        const tokenParam = new URLSearchParams(window.location.search).get("token");
+                        if (tokenParam) {
+                            const target = processedNFTs.find((t: any) => String(t.tokenId) === String(tokenParam));
+                            if (target) {
+                                setSelectedNFT(target);
+                            }
+                        }
+                    } catch {
+                        /* ignore param error */
+                    }
+                }
+
                 // Preload textures for this room
                 await preloadTextures(processedNFTs, 0, result.pagination.totalItems);
             } catch (err) {
@@ -477,7 +519,7 @@ export default function UnifiedGallery({
                 let mediaUrl = uri;
                 if (uri.startsWith("ipfs://")) {
                     // Extract CID and preserve any query parameters
-                    const withoutProtocol = uri.replace("ipfs://", "");
+                    const withoutProtocol = uri.replace("ipfs://", "").replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
                     mediaUrl = `https://ipfs.fileship.xyz/${withoutProtocol}`;
                 }
 
@@ -645,61 +687,73 @@ export default function UnifiedGallery({
 
     return (
         <div className="relative min-h-screen bg-black">
-            {/* Header */}
-            <div className="absolute z-50 top-4 left-4">
-                <Button
-                    onClick={() => router.push("/")}
-                    variant="outline"
-                    className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
-                >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back
-                </Button>
-            </div>
-
-            <div className="absolute z-50 top-4 right-4">
-                <div className="flex items-center gap-2">
-                    <div className="px-4 py-2 text-sm text-white rounded-lg bg-black/50 backdrop-blur-sm">
-                        {getHeaderInfoText()}
-                    </div>
-                    <Button
-                        onClick={handleRefresh}
-                        variant="outline"
-                        className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
-                        disabled={loading}
-                        title="Refresh collection and rebuild cache"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                    </Button>
-                    {galleryError && !isMobile && (
+            {/* Header (hidden in embed mode) */}
+            {!isEmbed && (
+                <>
+                    <div className="absolute z-50 top-4 left-4">
                         <Button
-                            onClick={() => setUse3D(!use3D)}
+                            onClick={() => router.push("/")}
                             variant="outline"
-                            className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
+                            className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px]"
+                            aria-label="Back to home"
                         >
-                            {use3D ? "Switch to 2D" : "Try 3D"}
+                            <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
+                            Back
                         </Button>
-                    )}
-                    {isMobile && (
-                        <div className="px-3 py-1 text-xs text-white/70 rounded bg-black/50 backdrop-blur-sm">
-                            Mobile 2D Mode
+                    </div>
+
+                    <div className="absolute z-50 top-4 right-4">
+                        <div className="flex items-center gap-2">
+                            <div className="px-4 py-2 text-sm text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm font-medium">
+                                {getHeaderInfoText()}
+                            </div>
+                            <Button
+                                onClick={handleRefresh}
+                                variant="outline"
+                                className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px]"
+                                disabled={loading}
+                                title="Refresh collection and rebuild cache"
+                                aria-label="Refresh collection and rebuild cache"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
+                            </Button>
+                            {!isMobile && (
+                                <Button
+                                    onClick={() => {
+                                        setGalleryError(null);
+                                        setUse3D(!use3D);
+                                    }}
+                                    variant="outline"
+                                    className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px]"
+                                    aria-label={use3D ? "Switch to 2D accessible grid view" : "Switch to 3D immersive gallery view"}
+                                >
+                                    {use3D ? "Switch to 2D" : "Switch to 3D"}
+                                </Button>
+                            )}
+                            {isMobile && (
+                                <div className="px-3 py-1 text-xs text-white/70 rounded bg-black/50 backdrop-blur-sm">
+                                    Mobile 2D Mode
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
-            </div>
+                    </div>
+                </>
+            )}
 
             {/* 3D Gallery with Error Boundary - Desktop only */}
             {use3D && !isMobile ? (
                 <ErrorBoundary
                     fallback={
                         <div className="flex items-center justify-center min-h-screen bg-black">
-                            <div className="space-y-4 text-center">
-                                <p className="text-xl text-red-400">Failed to load 3D gallery</p>
-                                <p className="text-white/60">
-                                    {galleryError || "Cannot read properties of undefined (reading 'S')"}
+                            <div className="space-y-4 text-center max-w-md p-6">
+                                <p className="text-xl font-bold text-amber-400">Failed to load 3D gallery</p>
+                                <p className="text-sm text-zinc-200">
+                                    {galleryError || "WebGL context could not be created."}
                                 </p>
-                                <p className="text-white/60">Showing 2D gallery instead:</p>
-                                <Button onClick={() => setUse3D(false)} className="bg-cyan-500 hover:bg-cyan-600">
+                                <Button
+                                    onClick={() => setUse3D(false)}
+                                    className="bg-white text-zinc-950 font-bold hover:bg-zinc-200 min-h-[44px]"
+                                >
                                     Switch to 2D Gallery
                                 </Button>
                             </div>
@@ -725,7 +779,15 @@ export default function UnifiedGallery({
                     />
                 </ErrorBoundary>
             ) : (
-                <Simple2DGallery nfts={nfts} onNFTSelect={setSelectedNFT} getImageUri={getImageUri} />
+                <Simple2DGallery
+                    nfts={nfts}
+                    onNFTSelect={setSelectedNFT}
+                    getImageUri={getImageUri}
+                    onSwitchTo3D={() => {
+                        setGalleryError(null);
+                        setUse3D(true);
+                    }}
+                />
             )}
 
             {/* Metadata Panel */}

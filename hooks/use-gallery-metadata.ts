@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { resolveIdentity } from "@/lib/tezos/identity-resolver";
 
 interface GalleryMetadata {
     name: string;
@@ -199,88 +200,87 @@ async function fetchCurationMetadata(curationId: string): Promise<CurationData> 
 }
 
 /**
- * Fetch collection metadata from objkt.com GraphQL API
+ * Fetch collection metadata from objkt.com GraphQL API with TzKT fallback
  */
 async function fetchCollectionMetadata(contractAddress: string): Promise<CollectionData> {
-    const query = `
-        query GetCollectionMetadata($contract: String!) {
-            fa(where: { contract: { _eq: $contract } }, limit: 1) {
-                contract
-                name
-                description
-                short_name
-                category
-                creator_address
+    try {
+        const query = `
+            query GetCollectionMetadata($contract: String!) {
+                fa(where: { contract: { _eq: $contract } }, limit: 1) {
+                    contract
+                    name
+                    description
+                    short_name
+                    category
+                    creator_address
+                }
+            }
+        `;
+
+        const response = await fetch("https://data.objkt.com/v3/graphql", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                query,
+                variables: { contract: contractAddress },
+            }),
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const collection = data.data?.fa?.[0];
+            if (collection) {
+                let creator_domain: string | undefined;
+                if (collection.creator_address) {
+                    try {
+                        const id = await resolveIdentity(collection.creator_address);
+                        creator_domain = id.displayName;
+                    } catch {}
+                }
+
+                return {
+                    contract: contractAddress,
+                    name: collection.name || collection.short_name || `Collection ${contractAddress.slice(0, 8)}...`,
+                    description: collection.description,
+                    symbol: collection.short_name,
+                    creator_address: collection.creator_address,
+                    creator_domain,
+                };
             }
         }
-    `;
-
-    const response = await fetch("https://data.objkt.com/v3/graphql", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query,
-            variables: { contract: contractAddress },
-        }),
-    });
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    } catch (err) {
+        console.warn("[GalleryMetadata] Objkt collection metadata failed, falling back to TzKT:", err);
     }
 
-    const data = await response.json();
-
-    if (data.errors) {
-        throw new Error(data.errors[0]?.message || "GraphQL error");
-    }
-
-    const collection = data.data?.fa?.[0];
-    if (!collection) {
-        throw new Error("Collection not found");
-    }
-
-    // Try to resolve creator domain if we have a creator address
-    let creator_domain;
-    if (collection.creator_address) {
-        try {
-            const domainResponse = await fetch(`https://api.tezos.domains/graphql`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    query: `
-                        query ResolveDomain($address: String!) {
-                            reverseRecord(address: $address) {
-                                domain {
-                                    name
-                                }
-                            }
-                        }
-                    `,
-                    variables: { address: collection.creator_address },
-                }),
-            });
-
-            if (domainResponse.ok) {
-                const domainData = await domainResponse.json();
-                creator_domain = domainData.data?.reverseRecord?.domain?.name;
+    // TzKT Contract fallback
+    try {
+        const tzktRes = await fetch(`https://api.tzkt.io/v1/contracts/${contractAddress}`);
+        if (tzktRes.ok) {
+            const tzktData = await tzktRes.json();
+            const creatorAddr = tzktData.creator?.address;
+            let creator_domain: string | undefined = tzktData.creator?.alias;
+            if (creatorAddr && !creator_domain) {
+                try {
+                    const id = await resolveIdentity(creatorAddr);
+                    creator_domain = id.displayName;
+                } catch {}
             }
-        } catch (error) {
-            // Silently fail domain resolution
-            console.log("Failed to resolve creator domain:", error);
+
+            return {
+                contract: contractAddress,
+                name: tzktData.metadata?.name || tzktData.alias || `Collection ${contractAddress.slice(0, 8)}...`,
+                description: tzktData.metadata?.description,
+                creator_address: creatorAddr,
+                creator_domain,
+            };
         }
-    }
+    } catch {}
 
     return {
         contract: contractAddress,
-        name: collection.name || collection.short_name || `Collection ${contractAddress.slice(0, 8)}...`,
-        description: collection.description,
-        symbol: collection.short_name,
-        creator_address: collection.creator_address,
-        creator_domain,
+        name: `Collection ${contractAddress.slice(0, 8)}...`,
     };
 }
 

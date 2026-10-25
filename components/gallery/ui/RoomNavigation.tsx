@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronLeft, ChevronRight, MoreHorizontal, Hash, Dices } from "lucide-react";
+import { ChevronLeft, ChevronRight, Hash, Dices } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useViewState } from "@/contexts/ViewStateContext";
 
 interface RoomNavigationProps {
     currentRoom: number;
@@ -17,12 +18,12 @@ export default function RoomNavigation({
     currentRoom,
     totalRooms,
     currentRoomNFTCount,
-    totalCollectionNFTs,
     address,
     onPrevRoom,
     onNextRoom,
     onGoToRoom,
 }: RoomNavigationProps) {
+    const { styleConfig } = useViewState();
     const [isExpanded, setIsExpanded] = useState(false);
     const [jumpInput, setJumpInput] = useState("");
     const [showJumpInput, setShowJumpInput] = useState(false);
@@ -96,18 +97,48 @@ export default function RoomNavigation({
         }
     };
 
+    const handleProgressBarKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "ArrowLeft" && currentRoom > 0) {
+            onPrevRoom();
+        } else if (e.key === "ArrowRight" && currentRoom < totalRooms - 1) {
+            onNextRoom();
+        }
+    };
+
     // Calculate progress percentage
     const progressPercent = ((currentRoom + 1) / totalRooms) * 100;
 
+    const btnClasses = styleConfig.ui.isLight
+        ? "bg-black/5 hover:bg-black/10 text-zinc-900 border-zinc-300 disabled:opacity-40"
+        : "bg-white/10 hover:bg-white/20 text-white border-white/10 disabled:opacity-40";
+
+    const focusRingClasses = styleConfig.ui.isLight
+        ? "focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+        : "focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
+
+    const textPrimary = styleConfig.ui.isLight ? "text-zinc-900" : "text-white";
+    const textSecondary = styleConfig.ui.isLight ? "text-zinc-700" : "text-zinc-300";
+
+    const solidBg = styleConfig.ui.isLight
+        ? styleConfig.id === "warm-solarium"
+            ? "#fcfaf6"
+            : "#ffffff"
+        : styleConfig.id === "cyberpunk-neon"
+        ? "#080914"
+        : styleConfig.id === "minimal-spotlight"
+        ? "#18191d"
+        : "#09090b";
+
     return (
         <TooltipProvider>
-            <div className="fixed z-50 transform -translate-x-1/2 bottom-4 left-1/2">
+            <div className={`fixed z-50 transform -translate-x-1/2 bottom-4 left-1/2 ${styleConfig.typography.fontFamily}`}>
                 <div
+                    style={{ backgroundColor: solidBg }}
                     className={`
-                        bg-black/80 backdrop-blur-md rounded-2xl border border-white/20 
-                        transition-all duration-300 ease-in-out
-                        ${isExpanded ? "px-3 py-3 sm:px-6 sm:py-4" : "px-2 py-2 sm:px-4 sm:py-3"}
-                        hover:bg-black/90 hover:border-white/30 max-w-[90vw] sm:max-w-none
+                        ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}
+                        rounded-2xl border shadow-2xl transition-all duration-300 ease-in-out
+                        ${isExpanded ? "px-3 py-3 sm:px-6 sm:py-4" : "px-2.5 py-2 sm:px-4 sm:py-3"}
+                        max-w-[92vw] sm:max-w-none
                     `}
                     onMouseEnter={() => setIsExpanded(true)}
                     onMouseLeave={() => {
@@ -122,28 +153,38 @@ export default function RoomNavigation({
                             <button
                                 onClick={onPrevRoom}
                                 disabled={currentRoom === 0}
-                                className="p-1.5 transition-colors rounded-full sm:p-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label={`Previous room (Room ${currentRoom})`}
+                                className={`p-2 transition-colors rounded-full min-w-[36px] min-h-[36px] flex items-center justify-center ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
                             >
-                                <ChevronLeft size={14} className="text-white sm:w-4 sm:h-4" />
+                                <ChevronLeft size={16} className={textPrimary} aria-hidden="true" />
                             </button>
 
-                            <div className="flex flex-col items-center min-w-[60px] sm:min-w-[80px]">
-                                <span className="text-xs font-medium text-white sm:text-sm">
+                            <div className="flex flex-col items-center min-w-[64px] sm:min-w-[80px]">
+                                <span className={`text-xs font-semibold sm:text-sm ${textPrimary}`}>
                                     {currentRoom + 1}/{totalRooms}
                                 </span>
-                                <div className="relative w-12 h-1 mt-1 sm:w-16">
+                                <div className="relative w-12 h-1.5 mt-1 sm:w-16">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <div
                                                 ref={progressBarRef}
-                                                className="w-full h-full rounded-full cursor-pointer bg-white/20"
+                                                role="progressbar"
+                                                aria-valuenow={currentRoom + 1}
+                                                aria-valuemin={1}
+                                                aria-valuemax={totalRooms}
+                                                aria-label={`Gallery progress: Room ${currentRoom + 1} of ${totalRooms}`}
+                                                tabIndex={0}
+                                                onKeyDown={handleProgressBarKeyDown}
+                                                className={`w-full h-full rounded-full cursor-pointer ${
+                                                    styleConfig.ui.isLight ? "bg-black/15" : "bg-white/20"
+                                                } ${focusRingClasses}`}
                                                 onClick={handleProgressBarClick}
                                                 onMouseMove={handleProgressBarMouseMove}
                                                 onMouseLeave={handleProgressBarMouseLeave}
                                             >
                                                 <div
-                                                    className="h-full transition-all duration-300 rounded-full bg-cyan-400"
-                                                    style={{ width: `${progressPercent}%` }}
+                                                    className="h-full transition-all duration-300 rounded-full"
+                                                    style={{ width: `${progressPercent}%`, backgroundColor: styleConfig.ui.accentColor }}
                                                 />
                                             </div>
                                         </TooltipTrigger>
@@ -159,9 +200,10 @@ export default function RoomNavigation({
                             <button
                                 onClick={onNextRoom}
                                 disabled={currentRoom === totalRooms - 1}
-                                className="p-1.5 transition-colors rounded-full sm:p-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label={`Next room (Room ${currentRoom + 2})`}
+                                className={`p-2 transition-colors rounded-full min-w-[36px] min-h-[36px] flex items-center justify-center ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
                             >
-                                <ChevronRight size={14} className="text-white sm:w-4 sm:h-4" />
+                                <ChevronRight size={16} className={textPrimary} aria-hidden="true" />
                             </button>
                         </div>
                     )}
@@ -172,24 +214,28 @@ export default function RoomNavigation({
                             <button
                                 onClick={onPrevRoom}
                                 disabled={currentRoom === 0}
-                                className="flex items-center gap-1 px-2 py-1.5 transition-colors rounded-lg sm:gap-2 sm:px-3 sm:py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label={`Previous room (Room ${currentRoom})`}
+                                className={`flex items-center gap-1 px-3 py-2 transition-colors rounded-lg min-h-[36px] ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
                             >
-                                <ChevronLeft size={14} className="text-white sm:w-4 sm:h-4" />
-                                <span className="text-xs text-white sm:text-sm">Previous</span>
+                                <ChevronLeft size={16} className={textPrimary} aria-hidden="true" />
+                                <span className={`text-xs font-medium sm:text-sm ${textPrimary}`}>Previous</span>
                             </button>
 
-                            <div className="flex flex-col items-center min-w-[120px] sm:min-w-[140px]">
+                            <div className="flex flex-col items-center min-w-[130px] sm:min-w-[150px]">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-white sm:text-base">
+                                    <span className={`text-sm font-semibold sm:text-base ${textPrimary}`}>
                                         Room {currentRoom + 1} of {totalRooms}
                                     </span>
                                     {onGoToRoom && (
                                         <button
                                             onClick={() => setShowJumpInput(!showJumpInput)}
-                                            className="p-1 transition-colors rounded hover:bg-white/20"
+                                            className={`p-1.5 transition-colors rounded min-w-[32px] min-h-[32px] flex items-center justify-center ${
+                                                styleConfig.ui.isLight ? "hover:bg-black/10" : "hover:bg-white/20"
+                                            } ${focusRingClasses}`}
                                             title="Jump to room"
+                                            aria-label="Direct room jump"
                                         >
-                                            <Hash size={12} className="text-cyan-400 sm:w-3.5 sm:h-3.5" />
+                                            <Hash size={14} style={{ color: styleConfig.ui.accentColor }} aria-hidden="true" />
                                         </button>
                                     )}
                                     {onGoToRoom && totalRooms > 1 && (
@@ -197,10 +243,13 @@ export default function RoomNavigation({
                                             <TooltipTrigger asChild>
                                                 <button
                                                     onClick={handleRandomRoom}
-                                                    className="p-1 transition-colors rounded hover:bg-white/20"
+                                                    className={`p-1.5 transition-colors rounded min-w-[32px] min-h-[32px] flex items-center justify-center ${
+                                                        styleConfig.ui.isLight ? "hover:bg-black/10" : "hover:bg-white/20"
+                                                    } ${focusRingClasses}`}
                                                     title="Random room"
+                                                    aria-label="Go to random room"
                                                 >
-                                                    <Dices size={12} className="text-purple-400 sm:w-3.5 sm:h-3.5" />
+                                                    <Dices size={14} className={styleConfig.ui.isLight ? "text-purple-600" : "text-purple-400"} aria-hidden="true" />
                                                 </button>
                                             </TooltipTrigger>
                                             <TooltipContent>
@@ -210,24 +259,35 @@ export default function RoomNavigation({
                                     )}
                                 </div>
 
-                                <div className="relative w-24 h-2 mt-2 mb-1 sm:w-32 sm:h-3">
+                                <div className="relative w-28 h-2.5 mt-2 mb-1 sm:w-36 sm:h-3">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <div
                                                 ref={progressBarRef}
-                                                className="w-full h-full transition-colors rounded-full cursor-pointer bg-white/20 hover:bg-white/30"
+                                                role="progressbar"
+                                                aria-valuenow={currentRoom + 1}
+                                                aria-valuemin={1}
+                                                aria-valuemax={totalRooms}
+                                                aria-label={`Gallery progress: Room ${currentRoom + 1} of ${totalRooms}`}
+                                                tabIndex={0}
+                                                onKeyDown={handleProgressBarKeyDown}
+                                                className={`w-full h-full transition-colors rounded-full cursor-pointer ${
+                                                    styleConfig.ui.isLight ? "bg-black/15 hover:bg-black/25" : "bg-white/20 hover:bg-white/30"
+                                                } ${focusRingClasses}`}
                                                 onClick={handleProgressBarClick}
                                                 onMouseMove={handleProgressBarMouseMove}
                                                 onMouseLeave={handleProgressBarMouseLeave}
                                             >
                                                 <div
-                                                    className="h-full transition-all duration-300 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400"
-                                                    style={{ width: `${progressPercent}%` }}
+                                                    className="h-full transition-all duration-300 rounded-full"
+                                                    style={{ width: `${progressPercent}%`, backgroundColor: styleConfig.ui.accentColor }}
                                                 />
                                                 {/* Hover indicator */}
                                                 {hoveredRoom !== null && (
                                                     <div
-                                                        className="absolute top-0 w-1 h-full rounded-full bg-white/60"
+                                                        className={`absolute top-0 w-1.5 h-full rounded-full ${
+                                                            styleConfig.ui.isLight ? "bg-black/50" : "bg-white/70"
+                                                        }`}
                                                         style={{ left: `${((hoveredRoom + 0.5) / totalRooms) * 100}%` }}
                                                     />
                                                 )}
@@ -241,7 +301,9 @@ export default function RoomNavigation({
                                     </Tooltip>
                                 </div>
 
-                                <span className="text-xs text-gray-300">{currentRoomNFTCount} NFTs in this room</span>
+                                <span className={`text-xs ${textSecondary}`}>
+                                    {currentRoomNFTCount} NFTs in this room
+                                </span>
                             </div>
 
                             {/* Jump to room input */}
@@ -256,11 +318,18 @@ export default function RoomNavigation({
                                         onChange={(e) => setJumpInput(e.target.value)}
                                         onKeyDown={handleKeyPress}
                                         placeholder="Room #"
-                                        className="w-16 px-2 py-1 text-xs text-white placeholder-gray-400 border rounded sm:w-20 sm:text-sm bg-white/10 border-white/20 focus:outline-none focus:border-cyan-400"
+                                        aria-label="Room number to jump to"
+                                        className={`w-16 px-2.5 py-1.5 text-xs border rounded-md sm:w-20 sm:text-sm ${
+                                            styleConfig.ui.isLight
+                                                ? "bg-white text-zinc-900 placeholder-zinc-500 border-zinc-300 focus:border-blue-600"
+                                                : "bg-black/60 text-white placeholder-zinc-400 border-zinc-700 focus:border-cyan-400"
+                                        } focus:outline-none`}
                                     />
                                     <button
                                         onClick={handleJumpSubmit}
-                                        className="px-2 py-1 text-xs text-white transition-colors rounded bg-cyan-500 hover:bg-cyan-600"
+                                        aria-label="Submit room jump"
+                                        style={{ backgroundColor: styleConfig.ui.accentColor, color: styleConfig.ui.isLight ? "#ffffff" : "#000000" }}
+                                        className="px-3 py-1.5 text-xs font-semibold rounded-md min-h-[32px] transition-opacity hover:opacity-90"
                                     >
                                         Go
                                     </button>
@@ -270,10 +339,11 @@ export default function RoomNavigation({
                             <button
                                 onClick={onNextRoom}
                                 disabled={currentRoom === totalRooms - 1}
-                                className="flex items-center gap-1 px-2 py-1.5 transition-colors rounded-lg sm:gap-2 sm:px-3 sm:py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label={`Next room (Room ${currentRoom + 2})`}
+                                className={`flex items-center gap-1 px-3 py-2 transition-colors rounded-lg min-h-[36px] ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
                             >
-                                <span className="text-xs text-white sm:text-sm">Next</span>
-                                <ChevronRight size={14} className="text-white sm:w-4 sm:h-4" />
+                                <span className={`text-xs font-medium sm:text-sm ${textPrimary}`}>Next</span>
+                                <ChevronRight size={16} className={textPrimary} aria-hidden="true" />
                             </button>
                         </div>
                     )}
