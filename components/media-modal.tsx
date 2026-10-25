@@ -55,7 +55,7 @@ interface MediaModalProps {
 export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const { client, isConnected, connect, getClient } = useWallet();
 
-    const [showMetadata, setShowMetadata] = useState(false);
+    const [showMetadata, setShowMetadata] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
@@ -94,7 +94,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     useLayoutEffect(() => {
         if (nft?.id !== currentNftIdRef.current) {
             currentNftIdRef.current = nft?.id || null;
-            setShowMetadata(false);
+            setShowMetadata(true);
             setIsFullscreen(false);
             setIsPlaying(false);
             setIsMuted(false);
