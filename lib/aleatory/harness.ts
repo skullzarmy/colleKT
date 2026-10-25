@@ -6,6 +6,17 @@
  * Provides client-side sandboxed execution for ALEATORY-001 / ALEATORY-002 generative art.
  */
 
+export function resolveLibraryUrl(libSpec: string): string {
+    const [name, version] = libSpec.split("@");
+    if (name === "p5") {
+        return `https://cdnjs.cloudflare.com/ajax/libs/p5.js/${version || "1.5.0"}/p5.min.js`;
+    }
+    if (name === "three") {
+        return `https://cdnjs.cloudflare.com/ajax/libs/three.js/${version || "r128"}/three.min.js`;
+    }
+    return `https://unpkg.com/${libSpec}`;
+}
+
 export function buildAleatoryHarnessHtml(
     code: string,
     seed: string = "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -14,8 +25,16 @@ export function buildAleatoryHarnessHtml(
     const safeSeed = seed.replace(/"/g, '\\"');
     const safeParams = JSON.stringify(params);
 
+    // Resolve any declared standard libraries (e.g. <meta name="alea:library" content="p5@1.5.0">)
+    let libraryScript = "";
+    const libMatch = code.match(/<meta\s+name=["']alea:library["']\s+content=["']([^"']+)["']/i);
+    if (libMatch && libMatch[1]) {
+        const libUrl = resolveLibraryUrl(libMatch[1].trim());
+        libraryScript = `<script src="${libUrl}"></script>\n`;
+    }
+
     const harnessScript = `
-<script>
+${libraryScript}<script>
 // Canonical $alea seeded PRNG from aleatory/src/lib/harness-core.js
 function xmur3(str) {
   var h = 1779033703 ^ str.length;
@@ -49,6 +68,8 @@ function sfc32(a, b, c, d) {
 var SEED_STRING = "${safeSeed}";
 var seedGen = xmur3(SEED_STRING);
 var rand = sfc32(seedGen(), seedGen(), seedGen(), seedGen());
+// Canonical warmup: drop first 16 values as required by ALEATORY-001
+for (var i = 0; i < 16; i++) rand();
 
 // Override Math.random with deterministic stream
 Math.random = function() {

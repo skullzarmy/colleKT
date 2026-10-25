@@ -462,9 +462,13 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             nft.metadata?.symbol?.toUpperCase() === "ALEA" ||
             (nft as any).symbol?.toUpperCase() === "ALEA" ||
             Boolean((nft.metadata as any)?.aleaSeed) ||
+            Boolean((nft.metadata as any)?.raw?.aleaSeed) ||
             Boolean((nft.metadata as any)?.aleaCode) ||
+            Boolean((nft.metadata as any)?.raw?.aleaCode) ||
             Boolean((nft.metadata as any)?.aleaParams) ||
+            Boolean((nft.metadata as any)?.raw?.aleaParams) ||
             Boolean((nft.metadata as any)?.aleaCodeHash) ||
+            Boolean((nft.metadata as any)?.raw?.aleaCodeHash) ||
             nft.metadata?.tags?.some((t) => t.toLowerCase().includes("aleatory")) ||
             nft.contractAlias?.toLowerCase().includes("aleatory"))
     );
@@ -482,19 +486,19 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const isGenerator = Boolean(
         nft &&
         (nft.standard === "aleatory-generator" ||
-            nft.metadata?.attributes?.some(
-                (a: any) => (a.name || a.trait_type || a.attribute?.name)?.toLowerCase() === "generator"
-            ) ||
-            (nft.metadata as any)?.type?.toLowerCase() === "generator" ||
-            (!nft.tokenId && nft.contractAddress))
+            !nft.tokenId ||
+            ((nft.metadata as any)?.type?.toLowerCase() === "generator" && !nft.tokenId))
     );
 
     // Extract on-chain Aleatory Seed
     const aleaSeed = useMemo(() => {
         if (!nft) return "";
+        const meta = nft.metadata || {};
+        const raw = (meta as any).raw || {};
         return (
-            ((nft.metadata as any)?.aleaSeed as string) ||
-            (nft.metadata?.attributes?.find((a: any) => {
+            ((meta as any).aleaSeed as string) ||
+            ((raw as any).aleaSeed as string) ||
+            (meta.attributes?.find((a: any) => {
                 const n = (a.name || a.trait_type || a.attribute?.name || "").toLowerCase();
                 return n === "seed" || n === "aleaseed" || n === "alea_seed";
             })?.value as string) ||
@@ -505,7 +509,9 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     // Parse on-chain Aleatory Parameters
     const parsedAleaParamsRecord = useMemo((): Record<string, unknown> => {
         if (!nft) return {};
-        const rawParams = (nft.metadata as any)?.aleaParams;
+        const meta = nft.metadata || {};
+        const raw = (meta as any).raw || {};
+        const rawParams = (meta as any).aleaParams || (raw as any).aleaParams;
         if (!rawParams) return {};
         if (typeof rawParams === "string") {
             try {
@@ -932,63 +938,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             />
                         )}
 
-                        {/* Top controls: Live/Static Toggle, Reload, Fullscreen */}
-                        <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
-                            {isAleatory && (
-                                <div className="flex items-center gap-1 bg-zinc-900/95 p-1 rounded-lg border border-zinc-700 shadow-lg">
-                                    <Button
-                                        onClick={() => setViewMode("live")}
-                                        size="sm"
-                                        variant="ghost"
-                                        aria-pressed={viewMode === "live"}
-                                        className={
-                                            viewMode === "live"
-                                                ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs h-8 px-2.5 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                                : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                        }
-                                    >
-                                        <AleatoryLogo size={15} className="mr-1.5" />
-                                        Live Render
-                                    </Button>
-                                    <Button
-                                        onClick={() => setViewMode("static")}
-                                        size="sm"
-                                        variant="ghost"
-                                        aria-pressed={viewMode === "static"}
-                                        className={
-                                            viewMode === "static"
-                                                ? "bg-zinc-700 hover:bg-zinc-600 text-white font-medium text-xs h-8 px-2.5 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                                : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                        }
-                                    >
-                                        <ImageIcon size={13} className="mr-1.5 text-zinc-400" />
-                                        Static Preview
-                                    </Button>
-                                </div>
-                            )}
 
-                            <Button
-                                onClick={handleReloadInteractive}
-                                size="sm"
-                                variant="secondary"
-                                aria-label="Reload artwork"
-                                title="Reload artwork"
-                                className="text-white hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700 min-h-[36px] min-w-[36px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
-                            >
-                                <RotateCcw size={15} aria-hidden="true" />
-                            </Button>
-
-                            <Button
-                                onClick={toggleFullscreen}
-                                size="sm"
-                                variant="secondary"
-                                aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                                className="text-white hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700 min-h-[36px] min-w-[36px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
-                            >
-                                {isFullscreen ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
-                            </Button>
-                        </div>
                     </div>
                 </div>
             );
@@ -1125,43 +1075,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             style={{ transform: `scale(${zoom})` }}
                         />
 
-                        {/* Top controls: Live/Static Toggle for Aleatory tokens */}
-                        {isAleatory && (
-                            <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
-                                <div className="flex items-center gap-1 bg-zinc-900/95 p-1 rounded-lg border border-zinc-700 shadow-lg">
-                                    <Button
-                                        onClick={() => setViewMode("live")}
-                                        size="sm"
-                                        variant="ghost"
-                                        aria-pressed={viewMode === "live"}
-                                        className="text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-8 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                    >
-                                        <AleatoryLogo size={15} className="mr-1.5" />
-                                        Live Render
-                                    </Button>
-                                    <Button
-                                        onClick={() => setViewMode("static")}
-                                        size="sm"
-                                        variant="ghost"
-                                        aria-pressed={viewMode === "static"}
-                                        className="bg-zinc-700 hover:bg-zinc-600 text-white font-medium text-xs h-8 px-2.5 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                    >
-                                        <ImageIcon size={13} className="mr-1.5 text-zinc-400" />
-                                        Static Preview
-                                    </Button>
-                                </div>
-                                <Button
-                                    onClick={toggleFullscreen}
-                                    size="sm"
-                                    variant="secondary"
-                                    aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                                    title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                                    className="text-white hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border-zinc-700 min-h-[36px] min-w-[36px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                >
-                                    {isFullscreen ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
-                                </Button>
-                            </div>
-                        )}
+
 
                         <div className="absolute flex gap-2 bottom-4 left-4">
                             <Button
@@ -1251,6 +1165,52 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {isAleatory && (
+                            <div className="flex items-center gap-1 bg-zinc-900/95 p-1 rounded-lg border border-zinc-700 shadow-sm">
+                                <Button
+                                    onClick={() => setViewMode("live")}
+                                    size="sm"
+                                    variant="ghost"
+                                    aria-pressed={viewMode === "live"}
+                                    className={
+                                        viewMode === "live"
+                                            ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs h-7 px-2.5 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                            : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-7 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                    }
+                                >
+                                    <AleatoryLogo size={14} className="mr-1.5" />
+                                    Live Render
+                                </Button>
+                                <Button
+                                    onClick={() => setViewMode("static")}
+                                    size="sm"
+                                    variant="ghost"
+                                    aria-pressed={viewMode === "static"}
+                                    className={
+                                        viewMode === "static"
+                                            ? "bg-zinc-700 hover:bg-zinc-600 text-white font-medium text-xs h-7 px-2.5 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                            : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-7 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                    }
+                                >
+                                    <ImageIcon size={13} className="mr-1.5 text-zinc-400" />
+                                    Static Preview
+                                </Button>
+                            </div>
+                        )}
+
+                        {((isAleatory && viewMode === "live") || mediaType === "html" || isEditArt) && (
+                            <Button
+                                onClick={handleReloadInteractive}
+                                variant="ghost"
+                                size="sm"
+                                aria-label="Reload artwork"
+                                title="Reload artwork"
+                                className="text-white border bg-zinc-900/60 hover:bg-zinc-800 hover:text-white border-zinc-700 min-h-[44px] min-w-[44px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                            >
+                                <RotateCcw size={16} />
+                            </Button>
+                        )}
+
                         <Button
                             onClick={() => setShowMetadata(!showMetadata)}
                             variant="ghost"
@@ -1301,101 +1261,245 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             <div className="p-6 space-y-6">
                                 <h3 className="text-lg font-semibold text-white">Details</h3>
 
-                                {/* In-Modal Marketplace Section */}
-                                <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5 text-sm font-semibold text-zinc-200">
-                                            <ShoppingCart size={16} className="text-cyan-400" />
-                                            <span>Marketplace</span>
-                                        </div>
-                                        {listing && (
-                                            <Badge variant="outline" className="text-emerald-400 border-emerald-800/80 bg-emerald-950/40 text-xs">
-                                                Active Listing
-                                            </Badge>
-                                        )}
-                                    </div>
-
-                                    {isLoadingListing ? (
-                                        <div className="flex items-center gap-2 text-xs text-zinc-400 py-2" aria-live="polite">
-                                            <Loader2 size={14} className="animate-spin text-cyan-400" />
-                                            <span>Checking active listings on Objkt...</span>
-                                        </div>
-                                    ) : listing ? (
-                                        <div className="space-y-3">
-                                            <div className="flex items-baseline justify-between">
-                                                <span className="text-xs text-zinc-400">Price:</span>
-                                                <span className="text-xl font-bold text-white tracking-tight">
-                                                    {listing.priceTez.toLocaleString(undefined, { maximumFractionDigits: 3 })} XTZ
-                                                </span>
-                                            </div>
-
-                                            <div className="text-[11px] text-zinc-400 flex items-center justify-between">
-                                                <span>Referral Partner:</span>
-                                                <span className="font-mono text-zinc-300">skllzrmy.tez</span>
-                                            </div>
-
-                                            {buySuccessHash ? (
-                                                <div className="p-3 bg-emerald-950/50 border border-emerald-800 rounded text-xs text-emerald-200 space-y-1.5" aria-live="polite">
-                                                    <div className="flex items-center gap-1.5 font-semibold text-emerald-300">
-                                                        <CheckCircle2 size={14} />
-                                                        <span>Purchase Successful!</span>
-                                                    </div>
-                                                    <p className="text-[11px] text-emerald-400/90">
-                                                        Operation submitted to the Tezos blockchain.
-                                                    </p>
+                                {/* 1. Artist Info */}
+                                {((nft.metadata?.creators && nft.metadata.creators.length > 0) || extraCreators.length > 0) && (
+                                    <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800">
+                                        <h4 className="mb-3 text-sm font-semibold text-zinc-200">Artist</h4>
+                                        <div className="space-y-2">
+                                            {(nft.metadata?.creators && nft.metadata.creators.length > 0
+                                                ? nft.metadata.creators
+                                                : extraCreators.map((c) => c.address)
+                                            ).map((creatorAddress) => (
+                                                <div key={creatorAddress} className="flex items-center justify-between">
+                                                    <span className="text-sm text-zinc-100 font-medium">
+                                                        {isLoadingArtistAliases
+                                                            ? "Loading..."
+                                                            : artistAliases[creatorAddress] ||
+                                                              extraCreators.find((c) => c.address === creatorAddress)?.alias ||
+                                                              `${creatorAddress.slice(0, 10)}...`}
+                                                    </span>
                                                     <button
-                                                        onClick={() => window.open(`https://tzkt.io/${buySuccessHash}`, "_blank")}
-                                                        className="text-cyan-300 underline text-[11px] flex items-center gap-1 hover:text-cyan-200 mt-1"
+                                                        onClick={() =>
+                                                            window.open(`https://tzkt.io/${creatorAddress}`, "_blank")
+                                                        }
+                                                        aria-label={`View TzKT profile for ${creatorAddress}`}
+                                                        className="flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200 underline min-h-[36px]"
                                                     >
-                                                        <span>View transaction on TzKT</span>
-                                                        <ExternalLink size={10} />
+                                                        <ExternalLink size={12} />
+                                                        <span>TzKT Profile</span>
                                                     </button>
                                                 </div>
-                                            ) : (
-                                                <>
-                                                    {buyError && (
-                                                        <div className="p-2.5 bg-red-950/50 border border-red-800 rounded text-xs text-red-200 flex items-start gap-2" role="alert">
-                                                            <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
-                                                            <span className="text-[11px] leading-relaxed">{buyError}</span>
-                                                        </div>
-                                                    )}
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
-                                                    <Button
-                                                        onClick={handleBuy}
-                                                        disabled={isBuying}
-                                                        aria-label={
-                                                            !isConnected
-                                                                ? "Connect wallet to buy this token"
-                                                                : `Collect for ${listing.priceTez} XTZ`
-                                                        }
-                                                        className="w-full min-h-[44px] font-semibold text-zinc-950 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 focus-visible:ring-2 focus-visible:ring-cyan-300 transition-all shadow-md"
-                                                    >
-                                                        {isBuying ? (
-                                                            <span className="flex items-center gap-2">
-                                                                <Loader2 size={16} className="animate-spin" />
-                                                                <span>Confirming in Wallet...</span>
-                                                            </span>
-                                                        ) : !isConnected ? (
-                                                            <span className="flex items-center gap-1.5">
-                                                                <Coins size={16} />
-                                                                <span>Connect Wallet to Collect</span>
-                                                            </span>
-                                                        ) : (
-                                                            <span>Collect for {listing.priceTez} XTZ</span>
-                                                        )}
-                                                    </Button>
-                                                </>
+                                {/* 2. Description */}
+                                {(nft.metadata?.description || collectionDetails?.description) && (
+                                    <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800">
+                                        <h4 className="mb-2 text-sm font-semibold text-zinc-200">Description</h4>
+                                        <p className="text-xs leading-relaxed text-zinc-300 whitespace-pre-wrap">
+                                            {nft.metadata?.description || collectionDetails?.description}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* 3. Collection Info */}
+                                <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 space-y-3">
+                                    <h4 className="text-sm font-semibold text-zinc-200">Collection</h4>
+                                    
+                                    <div className="flex items-start gap-3">
+                                        {collectionDetails?.logo && (
+                                            <img
+                                                src={getIPFSUrl(collectionDetails.logo)}
+                                                alt={`${getCollectionDisplayName()} logo`}
+                                                className="w-12 h-12 rounded-lg object-cover border border-zinc-700 bg-zinc-800 shrink-0"
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLElement;
+                                                    target.style.display = "none";
+                                                }}
+                                            />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-sm text-zinc-100 font-bold truncate">
+                                                    {getCollectionDisplayName()}
+                                                </span>
+                                                <button
+                                                    onClick={() =>
+                                                        window.open(`https://tzkt.io/${nft.contractAddress}`, "_blank")
+                                                    }
+                                                    aria-label={`View TzKT contract for ${nft.contractAddress}`}
+                                                    className="flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200 underline shrink-0 min-h-[36px]"
+                                                >
+                                                    <ExternalLink size={12} />
+                                                    <span>Contract</span>
+                                                </button>
+                                            </div>
+                                            {collectionDetails?.creatorAlias && (
+                                                <p className="text-xs text-zinc-300 mt-0.5">
+                                                    Curated by{" "}
+                                                    <span className="text-cyan-300 font-medium">
+                                                        {collectionDetails.creatorAlias}
+                                                    </span>
+                                                </p>
                                             )}
                                         </div>
-                                    ) : (
-                                        <div className="text-xs text-zinc-400 py-1">
-                                            <span>No active fixed-price listing found on marketplace.</span>
+                                    </div>
+
+                                    {/* Stats Strip */}
+                                    {(collectionDetails?.items !== undefined || collectionDetails?.floorPrice !== undefined) && (
+                                        <div className="flex items-center gap-2 pt-1 text-[11px] font-mono text-zinc-300 border-t border-zinc-800/80">
+                                            {collectionDetails?.items !== undefined && (
+                                                <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700">
+                                                    {collectionDetails.items} items
+                                                </span>
+                                            )}
+                                            {collectionDetails?.editions !== undefined && (
+                                                <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700">
+                                                    {collectionDetails.editions} editions
+                                                </span>
+                                            )}
+                                            {collectionDetails?.floorPrice !== undefined && (
+                                                <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-cyan-300 font-semibold">
+                                                    Floor: {collectionDetails.floorPrice} ꜩ
+                                                </span>
+                                            )}
                                         </div>
                                     )}
+
+                                    {collectionDetails?.description && nft.metadata?.description && nft.metadata.description !== collectionDetails.description && (
+                                        <p className="text-xs leading-relaxed text-zinc-300 pt-1 border-t border-zinc-800/60 whitespace-pre-wrap">
+                                            {collectionDetails.description}
+                                        </p>
+                                    )}
+
+                                    <div>
+                                        <span className="block text-[11px] text-zinc-400">Contract Address:</span>
+                                        <span className="font-mono text-xs text-zinc-300 break-all select-all">
+                                            {nft.contractAddress}
+                                        </span>
+                                    </div>
                                 </div>
 
-                                {/* Aleatory Platform Integration Badge & Live Minting */}
-                                {isAleatory && (
+                                {/* 4. Features & Attributes */}
+                                {/* Extracted On-Chain Features from $alea */}
+                                {extractedFeatures && Object.keys(extractedFeatures).length > 0 && (
+                                    <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 space-y-2">
+                                        <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+                                            <Code size={14} className="text-cyan-400" />
+                                            <span>Generative Features</span>
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-2 pt-1">
+                                            {Object.entries(extractedFeatures).map(([k, v]) => (
+                                                <div key={k} className="p-2 bg-zinc-800/90 rounded border border-zinc-700/60">
+                                                    <p className="text-[10px] uppercase font-mono text-zinc-400 truncate">{k}</p>
+                                                    <p className="text-xs font-semibold text-white truncate">{String(v)}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Generative Parameters (Aleatory / URL params / Seed) */}
+                                {(aleaParams.length > 0 || generativeParams.length > 0 || Boolean(aleaSeed)) && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+                                                {isAleatory ? (
+                                                    <AleatoryLogo size={16} className="mr-0.5" />
+                                                ) : (
+                                                    <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                                                )}
+                                                <span>Generative Parameters</span>
+                                                {isAleatory && (
+                                                    <Badge variant="outline" className="ml-1 text-[10px] text-cyan-300 border-cyan-800 bg-cyan-950/40">
+                                                        ALEATORY-001
+                                                    </Badge>
+                                                )}
+                                                {isEditArt && (
+                                                    <Badge variant="outline" className="ml-1 text-[10px] text-amber-300 border-amber-800 bg-amber-950/40">
+                                                        EDITART
+                                                    </Badge>
+                                                )}
+                                            </h4>
+                                        </div>
+
+                                        {/* On-chain Aleatory Seed display */}
+                                        {aleaSeed && (
+                                            <div className="p-2.5 bg-cyan-950/20 rounded border border-cyan-800/40 flex items-center justify-between">
+                                                <div className="min-w-0 pr-2">
+                                                    <p className="text-[10px] uppercase font-mono text-cyan-400/90 font-semibold">Aleatory Seed</p>
+                                                    <p className="text-xs font-mono font-semibold text-zinc-100 truncate mt-0.5 select-all" title={aleaSeed}>
+                                                        {aleaSeed}
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => copySeed(aleaSeed)}
+                                                    className="h-8 px-2 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0"
+                                                    title="Copy seed"
+                                                    aria-label="Copy aleatory seed"
+                                                >
+                                                    {copiedSeed ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+                                                </Button>
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {/* Aleatory on-chain parameters */}
+                                            {aleaParams.map((param, index) => (
+                                                <div key={`alea-param-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-cyan-900/40">
+                                                    <p className="text-[10px] uppercase font-mono text-cyan-400/90 truncate font-semibold">
+                                                        {param.label}
+                                                    </p>
+                                                    <p className="text-xs font-mono font-semibold text-white truncate mt-0.5" title={param.value}>
+                                                        {param.value}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                            {/* Generative URL parameters */}
+                                            {generativeParams.map((param, index) => (
+                                                <div key={`param-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-amber-900/40">
+                                                    <p className="text-[10px] uppercase font-mono text-amber-400/90 truncate font-semibold">
+                                                        {param.name}
+                                                    </p>
+                                                    <p className="text-xs font-mono font-semibold text-white truncate mt-0.5" title={param.value}>
+                                                        {param.value}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Categorical Attributes */}
+                                {cleanAttributes.length > 0 && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
+                                                <span>Attributes</span>
+                                                <span className="text-xs font-normal text-zinc-400">({cleanAttributes.length})</span>
+                                            </h4>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {cleanAttributes.map((attr, index) => (
+                                                <div key={`attr-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-zinc-800">
+                                                    <p className="text-[10px] uppercase font-mono text-zinc-400 truncate font-semibold">
+                                                        {attr.label}
+                                                    </p>
+                                                    <p className="text-xs font-semibold text-zinc-100 truncate mt-0.5" title={attr.value}>
+                                                        {attr.value}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 5. Market & Mint Section */}
+                                {isAleatory ? (
                                     <div className="p-4 rounded-lg bg-zinc-900/90 border border-cyan-900/50 space-y-3.5">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5 text-sm font-semibold text-cyan-300">
@@ -1514,183 +1618,113 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                                 )}
                                             </div>
                                         )}
-
-                                        <div className="flex flex-col gap-2 pt-1">
-                                            {isGenerator ? (
-                                                <Button
-                                                    onClick={() => window.open(`https://aleatory.art/generator/${nft.contractAddress}`, "_blank")}
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="w-full min-h-[44px] text-cyan-300 border-cyan-800/80 bg-cyan-950/30 hover:bg-cyan-900/50 hover:text-white"
-                                                >
-                                                    <ExternalLink size={14} className="mr-2" />
-                                                    View Generator on Aleatory.art
-                                                </Button>
-                                            ) : (
-                                                <Button
-                                                    onClick={() => window.open(`https://aleatory.art/piece/${nft.contractAddress}/${nft.tokenId}`, "_blank")}
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="w-full min-h-[44px] text-cyan-300 border-cyan-800/80 bg-cyan-950/30 hover:bg-cyan-900/50 hover:text-white"
-                                                >
-                                                    <ExternalLink size={14} className="mr-2" />
-                                                    View Piece on Aleatory.art
-                                                </Button>
-                                            )}
-                                        </div>
                                     </div>
-                                )}
-
-                                {/* Extracted On-Chain Features from $alea */}
-                                {extractedFeatures && Object.keys(extractedFeatures).length > 0 && (
-                                    <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 space-y-2">
-                                        <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
-                                            <Code size={14} className="text-cyan-400" />
-                                            <span>Generative Features</span>
-                                        </h4>
-                                        <div className="grid grid-cols-2 gap-2 pt-1">
-                                            {Object.entries(extractedFeatures).map(([k, v]) => (
-                                                <div key={k} className="p-2 bg-zinc-800/90 rounded border border-zinc-700/60">
-                                                    <p className="text-[10px] uppercase font-mono text-zinc-400 truncate">{k}</p>
-                                                    <p className="text-xs font-semibold text-white truncate">{String(v)}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Artist Info */}
-                                {((nft.metadata?.creators && nft.metadata.creators.length > 0) || extraCreators.length > 0) && (
-                                    <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800">
-                                        <h4 className="mb-3 text-sm font-semibold text-zinc-200">Artist</h4>
-                                        <div className="space-y-2">
-                                            {(nft.metadata?.creators && nft.metadata.creators.length > 0
-                                                ? nft.metadata.creators
-                                                : extraCreators.map((c) => c.address)
-                                            ).map((creatorAddress) => (
-                                                <div key={creatorAddress} className="flex items-center justify-between">
-                                                    <span className="text-sm text-zinc-100 font-medium">
-                                                        {isLoadingArtistAliases
-                                                            ? "Loading..."
-                                                            : artistAliases[creatorAddress] ||
-                                                              extraCreators.find((c) => c.address === creatorAddress)?.alias ||
-                                                              `${creatorAddress.slice(0, 10)}...`}
-                                                    </span>
-                                                    <button
-                                                        onClick={() =>
-                                                            window.open(`https://tzkt.io/${creatorAddress}`, "_blank")
-                                                        }
-                                                        aria-label={`View TzKT profile for ${creatorAddress}`}
-                                                        className="flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200 underline min-h-[36px]"
-                                                    >
-                                                        <ExternalLink size={12} />
-                                                        <span>TzKT Profile</span>
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Collection Info */}
-                                <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 space-y-3">
-                                    <h4 className="text-sm font-semibold text-zinc-200">Collection</h4>
-                                    
-                                    <div className="flex items-start gap-3">
-                                        {collectionDetails?.logo && (
-                                            <img
-                                                src={getIPFSUrl(collectionDetails.logo)}
-                                                alt={`${getCollectionDisplayName()} logo`}
-                                                className="w-12 h-12 rounded-lg object-cover border border-zinc-700 bg-zinc-800 shrink-0"
-                                                onError={(e) => {
-                                                    const target = e.target as HTMLElement;
-                                                    target.style.display = "none";
-                                                }}
-                                            />
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="text-sm text-zinc-100 font-bold truncate">
-                                                    {getCollectionDisplayName()}
-                                                </span>
-                                                <button
-                                                    onClick={() =>
-                                                        window.open(`https://tzkt.io/${nft.contractAddress}`, "_blank")
-                                                    }
-                                                    aria-label={`View TzKT contract for ${nft.contractAddress}`}
-                                                    className="flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200 underline shrink-0 min-h-[36px]"
-                                                >
-                                                    <ExternalLink size={12} />
-                                                    <span>Contract</span>
-                                                </button>
+                                ) : (
+                                    <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5 text-sm font-semibold text-zinc-200">
+                                                <ShoppingCart size={16} className="text-cyan-400" />
+                                                <span>Marketplace</span>
                                             </div>
-                                            {collectionDetails?.creatorAlias && (
-                                                <p className="text-xs text-zinc-300 mt-0.5">
-                                                    Curated by{" "}
-                                                    <span className="text-cyan-300 font-medium">
-                                                        {collectionDetails.creatorAlias}
+                                            {listing && (
+                                                <Badge variant="outline" className="text-emerald-400 border-emerald-800/80 bg-emerald-950/40 text-xs">
+                                                    Active Listing
+                                                </Badge>
+                                            )}
+                                        </div>
+
+                                        {isLoadingListing ? (
+                                            <div className="flex items-center gap-2 text-xs text-zinc-400 py-2" aria-live="polite">
+                                                <Loader2 size={14} className="animate-spin text-cyan-400" />
+                                                <span>Checking active listings...</span>
+                                            </div>
+                                        ) : listing ? (
+                                            <div className="space-y-3">
+                                                <div className="flex items-baseline justify-between">
+                                                    <span className="text-xs text-zinc-400">Price:</span>
+                                                    <span className="text-xl font-bold text-white tracking-tight">
+                                                        {listing.priceTez.toLocaleString(undefined, { maximumFractionDigits: 3 })} XTZ
                                                     </span>
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
+                                                </div>
 
-                                    {/* Stats Strip */}
-                                    {(collectionDetails?.items !== undefined || collectionDetails?.floorPrice !== undefined) && (
-                                        <div className="flex items-center gap-2 pt-1 text-[11px] font-mono text-zinc-300 border-t border-zinc-800/80">
-                                            {collectionDetails?.items !== undefined && (
-                                                <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700">
-                                                    {collectionDetails.items} items
-                                                </span>
-                                            )}
-                                            {collectionDetails?.editions !== undefined && (
-                                                <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700">
-                                                    {collectionDetails.editions} editions
-                                                </span>
-                                            )}
-                                            {collectionDetails?.floorPrice !== undefined && (
-                                                <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-cyan-300 font-semibold">
-                                                    Floor: {collectionDetails.floorPrice} ꜩ
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
+                                                <div className="text-[11px] text-zinc-400 flex items-center justify-between">
+                                                    <span>Referral Partner:</span>
+                                                    <span className="font-mono text-zinc-300">skllzrmy.tez</span>
+                                                </div>
 
-                                    {/* Collection Description fallback */}
-                                    {collectionDetails?.description && (!nft.metadata?.description || nft.metadata.description !== collectionDetails.description) && (
-                                        <p className="text-xs leading-relaxed text-zinc-300 pt-1 border-t border-zinc-800/60 whitespace-pre-wrap">
-                                            {collectionDetails.description}
-                                        </p>
-                                    )}
+                                                {buySuccessHash ? (
+                                                    <div className="p-3 bg-emerald-950/50 border border-emerald-800 rounded text-xs text-emerald-200 space-y-1.5" aria-live="polite">
+                                                        <div className="flex items-center gap-1.5 font-semibold text-emerald-300">
+                                                            <CheckCircle2 size={14} />
+                                                            <span>Purchase Successful!</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-emerald-400/90">
+                                                            Operation submitted to the Tezos blockchain.
+                                                        </p>
+                                                        <button
+                                                            onClick={() => window.open(`https://tzkt.io/${buySuccessHash}`, "_blank")}
+                                                            className="text-cyan-300 underline text-[11px] flex items-center gap-1 hover:text-cyan-200 mt-1"
+                                                        >
+                                                            <span>View transaction on TzKT</span>
+                                                            <ExternalLink size={10} />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        {buyError && (
+                                                            <div className="p-2.5 bg-red-950/50 border border-red-800 rounded text-xs text-red-200 flex items-start gap-2" role="alert">
+                                                                <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                                                                <span className="text-[11px] leading-relaxed">{buyError}</span>
+                                                            </div>
+                                                        )}
 
-                                    <div>
-                                        <span className="block text-[11px] text-zinc-400">Contract Address:</span>
-                                        <span className="font-mono text-xs text-zinc-300 break-all select-all">
-                                            {nft.contractAddress}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* NFT Description */}
-                                {nft.metadata?.description && (
-                                    <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800">
-                                        <h4 className="mb-2 text-sm font-semibold text-zinc-200">Description</h4>
-                                        <p className="text-xs leading-relaxed text-zinc-300 whitespace-pre-wrap">
-                                            {nft.metadata.description}
-                                        </p>
+                                                        <Button
+                                                            onClick={handleBuy}
+                                                            disabled={isBuying}
+                                                            aria-label={
+                                                                !isConnected
+                                                                    ? "Connect wallet to buy this token"
+                                                                    : `Collect for ${listing.priceTez} XTZ`
+                                                            }
+                                                            className="w-full min-h-[44px] font-semibold text-zinc-950 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 focus-visible:ring-2 focus-visible:ring-cyan-300 transition-all shadow-md"
+                                                        >
+                                                            {isBuying ? (
+                                                                <span className="flex items-center gap-2">
+                                                                    <Loader2 size={16} className="animate-spin" />
+                                                                    <span>Confirming in Wallet...</span>
+                                                                </span>
+                                                            ) : !isConnected ? (
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <Coins size={16} />
+                                                                    <span>Connect Wallet to Collect</span>
+                                                                </span>
+                                                            ) : (
+                                                                <span>Collect for {listing.priceTez} XTZ</span>
+                                                            )}
+                                                        </Button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="text-xs text-zinc-400 py-1">
+                                                <span>No active fixed-price listing found on marketplace.</span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
-                                {/* Token Info */}
+                                {/* 6. Token Details */}
                                 <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 space-y-2.5">
                                     <h4 className="text-sm font-semibold text-zinc-200">Token Details</h4>
                                     <div className="flex justify-between text-xs">
                                         <span className="text-zinc-400">Token ID:</span>
-                                        <span className="font-mono text-zinc-200">{nft.tokenId}</span>
+                                        <span className="font-mono text-zinc-200">{nft.tokenId || "0 (Generator)"}</span>
                                     </div>
                                     <div className="flex justify-between text-xs">
                                         <span className="text-zinc-400">Standard:</span>
-                                        <span className="text-zinc-200 uppercase">{nft.standard || "FA2"}</span>
+                                        <span className="text-zinc-200 uppercase font-mono">
+                                            {isAleatory ? "ALEATORY-001" : nft.standard || "FA2"}
+                                        </span>
                                     </div>
                                     {nft.balance && (
                                         <div className="flex justify-between text-xs">
@@ -1703,119 +1737,43 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     )}
                                 </div>
 
-                                {/* Section 1: Standard Categorical Attributes */}
-                                {cleanAttributes.length > 0 && (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
-                                                <span>Attributes</span>
-                                                <span className="text-xs font-normal text-zinc-400">({cleanAttributes.length})</span>
-                                            </h4>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {cleanAttributes.map((attr, index) => (
-                                                <div key={`attr-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-zinc-800">
-                                                    <p className="text-[10px] uppercase font-mono text-zinc-400 truncate font-semibold">
-                                                        {attr.label}
-                                                    </p>
-                                                    <p className="text-xs font-semibold text-zinc-100 truncate mt-0.5" title={attr.value}>
-                                                        {attr.value}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Section 2: Generative Parameters (Aleatory / URL params / Seed) */}
-                                {(aleaParams.length > 0 || generativeParams.length > 0 || Boolean(aleaSeed)) && (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
-                                                {isAleatory ? (
-                                                    <AleatoryLogo size={16} className="mr-0.5" />
-                                                ) : (
-                                                    <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                                                )}
-                                                <span>Generative Parameters</span>
-                                                {isAleatory && (
-                                                    <Badge variant="outline" className="ml-1 text-[10px] text-cyan-300 border-cyan-800 bg-cyan-950/40">
-                                                        ALEATORY-001
-                                                    </Badge>
-                                                )}
-                                                {isEditArt && (
-                                                    <Badge variant="outline" className="ml-1 text-[10px] text-amber-300 border-amber-800 bg-amber-950/40">
-                                                        EDITART
-                                                    </Badge>
-                                                )}
-                                            </h4>
-                                        </div>
-
-                                        {/* On-chain Aleatory Seed display if available */}
-                                        {aleaSeed && (
-                                            <div className="p-2.5 bg-cyan-950/20 rounded border border-cyan-800/40 flex items-center justify-between">
-                                                <div className="min-w-0 pr-2">
-                                                    <p className="text-[10px] uppercase font-mono text-cyan-400/90 font-semibold">Aleatory Seed</p>
-                                                    <p className="text-xs font-mono font-semibold text-zinc-100 truncate mt-0.5 select-all" title={aleaSeed}>
-                                                        {aleaSeed}
-                                                    </p>
-                                                </div>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => copySeed(aleaSeed)}
-                                                    className="h-8 px-2 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0"
-                                                    title="Copy seed"
-                                                    aria-label="Copy aleatory seed"
-                                                >
-                                                    {copiedSeed ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
-                                                </Button>
-                                            </div>
-                                        )}
-
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {/* Aleatory on-chain parameters */}
-                                            {aleaParams.map((param, index) => (
-                                                <div key={`alea-param-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-cyan-900/40">
-                                                    <p className="text-[10px] uppercase font-mono text-cyan-400/90 truncate font-semibold">
-                                                        {param.label}
-                                                    </p>
-                                                    <p className="text-xs font-mono font-semibold text-white truncate mt-0.5" title={param.value}>
-                                                        {param.value}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                            {/* Generative URL parameters (e.g. m0, m1, etc.) */}
-                                            {generativeParams.map((param, index) => (
-                                                <div key={`param-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-amber-900/40">
-                                                    <p className="text-[10px] uppercase font-mono text-amber-400/90 truncate font-semibold">
-                                                        {param.name}
-                                                    </p>
-                                                    <p className="text-xs font-mono font-semibold text-white truncate mt-0.5" title={param.value}>
-                                                        {param.value}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* External Links */}
+                                {/* 7. External Links */}
                                 <div className="space-y-2 pt-2">
-                                    <Button
-                                        onClick={() =>
-                                            window.open(
-                                                `https://objkt.com/tokens/${nft.contractAddress}/${nft.tokenId}?ref=tz1ZzSmVcnVaWNZKJradtrDnjSjzTp6qjTEW`,
-                                                "_blank"
-                                            )
-                                        }
-                                        variant="outline"
-                                        size="sm"
-                                        className="w-full min-h-[44px] text-zinc-200 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:text-white"
-                                    >
-                                        <ExternalLink className="w-4 h-4 mr-2" />
-                                        View on Objkt.com
-                                    </Button>
+                                    {isAleatory ? (
+                                        <Button
+                                            onClick={() =>
+                                                window.open(
+                                                    isGenerator || !nft.tokenId
+                                                        ? `https://aleatory.art/generator/${nft.contractAddress}`
+                                                        : `https://aleatory.art/piece/${nft.contractAddress}/${nft.tokenId}`,
+                                                    "_blank"
+                                                )
+                                            }
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full min-h-[44px] text-cyan-300 bg-cyan-950/40 border-cyan-800 hover:bg-cyan-900/60 hover:text-white"
+                                        >
+                                            <AleatoryLogo size={16} className="mr-2" />
+                                            {isGenerator || !nft.tokenId
+                                                ? "View Generator on Aleatory.art"
+                                                : "View Piece on Aleatory.art"}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={() =>
+                                                window.open(
+                                                    `https://objkt.com/tokens/${nft.contractAddress}/${nft.tokenId}?ref=tz1ZzSmVcnVaWNZKJradtrDnjSjzTp6qjTEW`,
+                                                    "_blank"
+                                                )
+                                            }
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full min-h-[44px] text-zinc-200 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:text-white"
+                                        >
+                                            <ExternalLink className="w-4 h-4 mr-2" />
+                                            View on Objkt.com
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </div>

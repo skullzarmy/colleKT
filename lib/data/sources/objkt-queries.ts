@@ -529,6 +529,12 @@ export class ObjktQueries {
             creators,
             attributes: tzktToken?.metadata?.attributes || undefined,
             formats: tzktToken?.metadata?.formats || undefined,
+            aleaSeed: tzktToken?.metadata?.aleaSeed || undefined,
+            aleaParams: tzktToken?.metadata?.aleaParams || undefined,
+            aleaCode: tzktToken?.metadata?.aleaCode || undefined,
+            aleaCodeHash: tzktToken?.metadata?.aleaCodeHash || undefined,
+            aleaProvider: tzktToken?.metadata?.aleaProvider || undefined,
+            aleaCodeEncoding: tzktToken?.metadata?.aleaCodeEncoding || undefined,
             raw: tzktToken?.metadata || undefined,
         };
 

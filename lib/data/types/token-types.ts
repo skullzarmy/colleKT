@@ -59,6 +59,14 @@ export interface UnifiedMetadata {
     // Supply information
     supply?: number | string;
 
+    // Aleatory (ALEATORY-001) generative metadata
+    aleaSeed?: string;
+    aleaParams?: string | Record<string, unknown>;
+    aleaCode?: string;
+    aleaCodeHash?: string;
+    aleaProvider?: string;
+    aleaCodeEncoding?: string;
+
     // Utility token indicators
     shouldPreferSymbol?: boolean;
     isUtilityToken?: boolean;
