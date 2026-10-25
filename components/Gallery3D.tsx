@@ -9,7 +9,6 @@ import RoomNavigation from "./gallery/ui/RoomNavigation";
 import GalleryFooter from "./gallery/ui/GalleryFooter";
 import { useViewState } from "@/contexts/ViewStateContext";
 import LoadingAnimation from "./LoadingAnimation";
-import { isWebGLAvailable } from "@/lib/gallery/webgl-detector";
 
 export type CameraMode = "walk" | "overview";
 
@@ -25,7 +24,6 @@ interface Gallery3DProps {
     totalNFTs?: number; // Total NFTs in the collection for calculating total rooms
     // Layout coordination props to avoid UI overlaps
     topOffset?: number; // Offset from top to avoid overlapping with page headers
-    onWebGLError?: (error: string) => void;
 }
 
 const NFTS_PER_ROOM = 20;
@@ -41,19 +39,9 @@ export default function Gallery3D({
     onRoomChange,
     totalNFTs = 0,
     topOffset = 0, // Default to no offset
-    onWebGLError,
 }: Gallery3DProps) {
     const [currentRoom, setCurrentRoom] = useState(initialRoom);
     const { cameraMode, setCameraMode } = useViewState();
-    const [hasWebGL, setHasWebGL] = useState(true);
-
-    useEffect(() => {
-        const available = isWebGLAvailable();
-        if (!available) {
-            setHasWebGL(false);
-            onWebGLError?.("WebGL is disabled or unavailable");
-        }
-    }, [onWebGLError]);
 
     // Update local room state when prop changes
     useEffect(() => {
@@ -89,10 +77,6 @@ export default function Gallery3D({
                 </div>
             </div>
         );
-    }
-
-    if (!hasWebGL) {
-        return null;
     }
 
     return (

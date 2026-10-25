@@ -12,7 +12,6 @@ import { collektClient } from "@/lib/data/sources/collekt-client";
 import { UnifiedToken } from "@/lib/data/types/token-types";
 import * as THREE from "three";
 import LoadingAnimation from "./LoadingAnimation";
-import { isWebGLAvailable } from "@/lib/gallery/webgl-detector";
 
 // Dynamically import Gallery3D with no SSR to prevent hydration issues
 const Gallery3D = dynamic(() => import("@/components/Gallery3D"), {
@@ -64,12 +63,12 @@ function Simple2DGallery({
     nfts,
     onNFTSelect,
     getImageUri,
-    webglUnavailable = false,
+    onSwitchTo3D,
 }: {
     nfts: UnifiedToken[];
     onNFTSelect: (nft: UnifiedToken) => void;
     getImageUri: (nft: UnifiedToken) => string | null;
-    webglUnavailable?: boolean;
+    onSwitchTo3D?: () => void;
 }) {
     const getIPFSUrl = (uri: string) => {
         if (uri.startsWith("ipfs://")) {
@@ -81,20 +80,16 @@ function Simple2DGallery({
 
     return (
         <div className="min-h-screen p-6 sm:p-8 bg-black text-white pt-20">
-            {webglUnavailable && (
-                <div
-                    className="max-w-5xl mx-auto mb-6 p-4 rounded-xl bg-zinc-900 border-2 border-amber-600/70 text-amber-200 text-xs flex items-center justify-between shadow-lg"
-                    role="status"
-                    aria-live="polite"
-                >
-                    <div className="flex items-center gap-2.5">
-                        <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-950 px-2 py-0.5 rounded border border-amber-600 text-amber-300 shrink-0">
-                            2D View Active
-                        </span>
-                        <span className="text-zinc-200 text-xs">
-                            Hardware-accelerated 3D is disabled or unsupported in this browser environment. Displaying in high-performance 2D gallery view.
-                        </span>
-                    </div>
+            {onSwitchTo3D && (
+                <div className="max-w-7xl mx-auto mb-6 flex items-center justify-between p-3.5 bg-zinc-900/80 border border-zinc-700 rounded-xl">
+                    <span className="text-xs text-zinc-300">2D Grid View Active</span>
+                    <Button
+                        onClick={onSwitchTo3D}
+                        size="sm"
+                        className="bg-white text-zinc-950 hover:bg-zinc-200 font-bold text-xs min-h-[36px]"
+                    >
+                        Switch to 3D Gallery
+                    </Button>
                 </div>
             )}
 
@@ -176,7 +171,6 @@ export default function UnifiedGallery({
     const [selectedNFT, setSelectedNFT] = useState<UnifiedToken | null>(null);
     const [use3D, setUse3D] = useState(true);
     const [isMobile, setIsMobile] = useState(false);
-    const [hasWebGL, setHasWebGL] = useState<boolean>(true);
     const [galleryError, setGalleryError] = useState<string | null>(null);
     const [loadingProgress, setLoadingProgress] = useState<string>("Fetching NFTs...");
     const [preloadedTextures, setPreloadedTextures] = useState<Map<string, THREE.Texture>>(new Map());
@@ -243,41 +237,6 @@ export default function UnifiedGallery({
                 return () => pointerQuery.removeListener(handlePointerChange);
             }
         }
-    }, []);
-
-    // Detect WebGL capability and handle unhandled context rejections
-    useEffect(() => {
-        const webglOk = isWebGLAvailable();
-        setHasWebGL(webglOk);
-        if (!webglOk) {
-            setUse3D(false);
-            setGalleryError(
-                "Hardware acceleration / WebGL is disabled or unavailable in this browser. Automatically switched to 2D view."
-            );
-        }
-
-        const handleRejection = (event: PromiseRejectionEvent) => {
-            const reason = event.reason?.message || String(event.reason || "");
-            if (
-                reason.includes("WebGL") ||
-                reason.includes("WebGLRenderer") ||
-                reason.includes("Error creating WebGL context")
-            ) {
-                console.warn(
-                    "[UnifiedGallery] WebGL initialization rejected, gracefully switching to 2D view:",
-                    reason
-                );
-                event.preventDefault();
-                setHasWebGL(false);
-                setUse3D(false);
-                setGalleryError(
-                    "WebGL context could not be created. Gracefully switched to 2D gallery view."
-                );
-            }
-        };
-
-        window.addEventListener("unhandledrejection", handleRejection);
-        return () => window.removeEventListener("unhandledrejection", handleRejection);
     }, []);
 
     // Update page title when metadata loads (only if enabled)
@@ -756,13 +715,16 @@ export default function UnifiedGallery({
                             >
                                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                             </Button>
-                            {galleryError && !isMobile && (
+                            {!isMobile && (
                                 <Button
-                                    onClick={() => setUse3D(!use3D)}
+                                    onClick={() => {
+                                        setGalleryError(null);
+                                        setUse3D(!use3D);
+                                    }}
                                     variant="outline"
                                     className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
                                 >
-                                    {use3D ? "Switch to 2D" : "Try 3D"}
+                                    {use3D ? "Switch to 2D" : "Switch to 3D"}
                                 </Button>
                             )}
                             {isMobile && (
@@ -775,17 +737,16 @@ export default function UnifiedGallery({
                 </>
             )}
 
-            {/* 3D Gallery with Error Boundary - Desktop only when WebGL is active */}
-            {use3D && !isMobile && hasWebGL ? (
+            {/* 3D Gallery with Error Boundary - Desktop only */}
+            {use3D && !isMobile ? (
                 <ErrorBoundary
                     fallback={
                         <div className="flex items-center justify-center min-h-screen bg-black">
                             <div className="space-y-4 text-center max-w-md p-6">
-                                <p className="text-xl font-bold text-amber-400">3D Acceleration Unavailable</p>
+                                <p className="text-xl font-bold text-amber-400">Failed to load 3D gallery</p>
                                 <p className="text-sm text-zinc-200">
-                                    {galleryError || "WebGL context could not be created on this device."}
+                                    {galleryError || "WebGL context could not be created."}
                                 </p>
-                                <p className="text-xs text-zinc-400">Switching to responsive 2D gallery:</p>
                                 <Button
                                     onClick={() => setUse3D(false)}
                                     className="bg-white text-zinc-950 font-bold hover:bg-zinc-200 min-h-[44px]"
@@ -798,7 +759,6 @@ export default function UnifiedGallery({
                     onError={(error) => {
                         console.error("3D Gallery Error:", error);
                         setGalleryError(error.message);
-                        setHasWebGL(false);
                         setUse3D(false);
                     }}
                 >
@@ -813,11 +773,6 @@ export default function UnifiedGallery({
                         onRoomChange={updateRoomInUrl}
                         totalNFTs={totalNFTs}
                         topOffset={64} // 64px to avoid overlapping with Back button
-                        onWebGLError={(err) => {
-                            setHasWebGL(false);
-                            setUse3D(false);
-                            setGalleryError(err);
-                        }}
                     />
                 </ErrorBoundary>
             ) : (
@@ -825,7 +780,10 @@ export default function UnifiedGallery({
                     nfts={nfts}
                     onNFTSelect={setSelectedNFT}
                     getImageUri={getImageUri}
-                    webglUnavailable={!hasWebGL}
+                    onSwitchTo3D={() => {
+                        setGalleryError(null);
+                        setUse3D(true);
+                    }}
                 />
             )}
 
