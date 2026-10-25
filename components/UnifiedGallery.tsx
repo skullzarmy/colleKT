@@ -694,26 +694,28 @@ export default function UnifiedGallery({
                         <Button
                             onClick={() => router.push("/")}
                             variant="outline"
-                            className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
+                            className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px]"
+                            aria-label="Back to home"
                         >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
                             Back
                         </Button>
                     </div>
 
                     <div className="absolute z-50 top-4 right-4">
                         <div className="flex items-center gap-2">
-                            <div className="px-4 py-2 text-sm text-white rounded-lg bg-black/50 backdrop-blur-sm">
+                            <div className="px-4 py-2 text-sm text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm font-medium">
                                 {getHeaderInfoText()}
                             </div>
                             <Button
                                 onClick={handleRefresh}
                                 variant="outline"
-                                className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
+                                className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px]"
                                 disabled={loading}
                                 title="Refresh collection and rebuild cache"
+                                aria-label="Refresh collection and rebuild cache"
                             >
-                                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
                             </Button>
                             {!isMobile && (
                                 <Button
@@ -722,7 +724,8 @@ export default function UnifiedGallery({
                                         setUse3D(!use3D);
                                     }}
                                     variant="outline"
-                                    className="text-white bg-black/50 border-white/20 hover:bg-black/70 backdrop-blur-sm"
+                                    className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px]"
+                                    aria-label={use3D ? "Switch to 2D accessible grid view" : "Switch to 3D immersive gallery view"}
                                 >
                                     {use3D ? "Switch to 2D" : "Switch to 3D"}
                                 </Button>

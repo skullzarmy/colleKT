@@ -113,7 +113,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                 onClick={() => setShowInteractive(false)}
                                 variant="outline"
                                 size="sm"
-                                className="text-gray-300 border-gray-600 hover:bg-gray-800"
+                                className="text-zinc-200 hover:text-white border-zinc-700 hover:bg-zinc-800"
                             >
                                 Back to Details
                             </Button>
@@ -299,7 +299,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                     }
                                     variant="outline"
                                     size="sm"
-                                    className="text-gray-300 border-gray-600 hover:bg-gray-800"
+                                    className="text-zinc-200 hover:text-white border-zinc-700 hover:bg-zinc-800"
                                 >
                                     <ExternalLink className="w-4 h-4 mr-2" />
                                     View on Objkt
@@ -315,7 +315,7 @@ export default function MetadataPanel({ nft, onClose }: MetadataPanelProps) {
                                         }}
                                         variant="outline"
                                         size="sm"
-                                        className="text-gray-300 border-gray-600 hover:bg-gray-800"
+                                        className="text-zinc-200 hover:text-white border-zinc-700 hover:bg-zinc-800"
                                     >
                                         <ExternalLink className="w-4 h-4 mr-2" />
                                         Original File
