@@ -32,5 +32,6 @@ mcp.json
 *.MD
 
 /.vscode
+/.claude
 # bun (project standardized on pnpm)
 bun.lockb

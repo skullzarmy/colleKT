@@ -15,9 +15,6 @@ const nextConfig = {
     ],
     unoptimized: true,
   },
-  experimental: {
-    esmExternals: false,
-  },
   webpack: (config, { isServer }) => {
     // Handle Three.js and related modules
     config.externals.push({
