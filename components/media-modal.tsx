@@ -96,6 +96,8 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const [extractedFeatures, setExtractedFeatures] = useState<Record<string, string | number | boolean> | null>(null);
     const [viewMode, setViewMode] = useState<"live" | "static">("live");
     const [copiedSeed, setCopiedSeed] = useState(false);
+    const [freshAleaSeed, setFreshAleaSeed] = useState<string>("");
+    const [freshAleaParams, setFreshAleaParams] = useState<Record<string, unknown>>({});
 
     // Aleatory Generator sale & live minting state
     const [aleatorySaleInfo, setAleatorySaleInfo] = useState<AleatorySaleInfo | null>(null);
@@ -506,6 +508,52 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         );
     }, [nft]);
 
+    // Synchronize on-chain Aleatory seed & params directly from TzKT
+    useEffect(() => {
+        if (!nft || !isAleatory || !nft.contractAddress || !nft.tokenId) {
+            setFreshAleaSeed("");
+            setFreshAleaParams({});
+            return;
+        }
+
+        const knownSeed =
+            (nft.metadata as any)?.aleaSeed ||
+            (nft.metadata as any)?.raw?.aleaSeed;
+        if (knownSeed) setFreshAleaSeed(knownSeed);
+
+        const knownParams =
+            (nft.metadata as any)?.aleaParams ||
+            (nft.metadata as any)?.raw?.aleaParams;
+        if (knownParams) {
+            try {
+                setFreshAleaParams(
+                    typeof knownParams === "string" ? JSON.parse(knownParams) : knownParams
+                );
+            } catch {}
+        }
+
+        fetch(
+            `https://api.tzkt.io/v1/tokens?contract=${nft.contractAddress}&tokenId=${nft.tokenId}`
+        )
+            .then((res) => res.json())
+            .then((tokens) => {
+                if (tokens && tokens[0]?.metadata) {
+                    const m = tokens[0].metadata;
+                    if (m.aleaSeed) setFreshAleaSeed(m.aleaSeed);
+                    if (m.aleaParams) {
+                        try {
+                            setFreshAleaParams(
+                                typeof m.aleaParams === "string"
+                                    ? JSON.parse(m.aleaParams)
+                                    : m.aleaParams
+                            );
+                        } catch {}
+                    }
+                }
+            })
+            .catch((e) => console.warn("[MediaModal] Fresh TzKT metadata fetch error:", e));
+    }, [nft?.contractAddress, nft?.tokenId, isAleatory]);
+
     // Parse on-chain Aleatory Parameters
     const parsedAleaParamsRecord = useMemo((): Record<string, unknown> => {
         if (!nft) return {};
@@ -526,6 +574,13 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         return {};
     }, [nft]);
 
+    // Effective on-chain seed & parameters
+    const effectiveSeed = freshAleaSeed || aleaSeed;
+    const effectiveParams =
+        Object.keys(freshAleaParams).length > 0
+            ? freshAleaParams
+            : parsedAleaParamsRecord;
+
     // Humanize snake_case or kebab-case keys for presentation
     const humanizeKey = (key: string): string => {
         return key
@@ -536,12 +591,12 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
 
     // Formatted on-chain Aleatory Parameters
     const aleaParams = useMemo(() => {
-        return Object.entries(parsedAleaParamsRecord).map(([k, v]) => ({
+        return Object.entries(effectiveParams).map(([k, v]) => ({
             key: k,
             label: humanizeKey(k),
             value: typeof v === "object" ? JSON.stringify(v) : String(v),
         }));
-    }, [parsedAleaParamsRecord]);
+    }, [effectiveParams]);
 
     // Parse generative parameters from artifactUri (e.g. ?m0=0.443&m1=0.259... or ?seed=... or ?hash=...)
     const generativeParams = useMemo((): { name: string; value: string }[] => {
@@ -910,14 +965,23 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                 <div className={htmlContainerClass}>
                     <div className="relative w-full h-full overflow-hidden bg-black rounded-lg shadow-2xl max-w-7xl">
                         {isAleatory && interactiveCode ? (
-                            <AleatoryFrame
-                                key={`aleatory-${nft.id}-${reloadKey}`}
-                                code={interactiveCode}
-                                seed={aleaSeed || `0x${nft.tokenId}`}
-                                params={parsedAleaParamsRecord}
-                                title={nft.metadata?.name || `Token #${nft.tokenId}`}
-                                onFeaturesReady={(features) => setExtractedFeatures(features)}
-                            />
+                            !isGenerator && !effectiveSeed ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-white bg-zinc-950">
+                                    <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mb-3" />
+                                    <p className="text-xs text-zinc-300 font-mono">
+                                        Resolving on-chain piece seed...
+                                    </p>
+                                </div>
+                            ) : (
+                                <AleatoryFrame
+                                    key={`aleatory-${nft.id}-${reloadKey}-${effectiveSeed}`}
+                                    code={interactiveCode}
+                                    seed={effectiveSeed}
+                                    params={effectiveParams}
+                                    title={nft.metadata?.name || `Token #${nft.tokenId}`}
+                                    onFeaturesReady={(features) => setExtractedFeatures(features)}
+                                />
+                            )
                         ) : isLoadingCode ? (
                             <div className="w-full h-full flex flex-col items-center justify-center text-white bg-zinc-950">
                                 <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mb-3" />
@@ -1402,7 +1466,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                 )}
 
                                 {/* Generative Parameters (Aleatory / URL params / Seed) */}
-                                {(aleaParams.length > 0 || generativeParams.length > 0 || Boolean(aleaSeed)) && (
+                                {(aleaParams.length > 0 || generativeParams.length > 0 || Boolean(effectiveSeed)) && (
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between">
                                             <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-1.5">
@@ -1426,18 +1490,18 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                         </div>
 
                                         {/* On-chain Aleatory Seed display */}
-                                        {aleaSeed && (
+                                        {effectiveSeed && (
                                             <div className="p-2.5 bg-cyan-950/20 rounded border border-cyan-800/40 flex items-center justify-between">
                                                 <div className="min-w-0 pr-2">
                                                     <p className="text-[10px] uppercase font-mono text-cyan-400/90 font-semibold">Aleatory Seed</p>
-                                                    <p className="text-xs font-mono font-semibold text-zinc-100 truncate mt-0.5 select-all" title={aleaSeed}>
-                                                        {aleaSeed}
+                                                    <p className="text-xs font-mono font-semibold text-zinc-100 truncate mt-0.5 select-all" title={effectiveSeed}>
+                                                        {effectiveSeed}
                                                     </p>
                                                 </div>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => copySeed(aleaSeed)}
+                                                    onClick={() => copySeed(effectiveSeed)}
                                                     className="h-8 px-2 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0"
                                                     title="Copy seed"
                                                     aria-label="Copy aleatory seed"

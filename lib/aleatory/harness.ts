@@ -64,12 +64,10 @@ function sfc32(a, b, c, d) {
   };
 }
 
-// Initialize seed & PRNG stream
+// Initialize seed & PRNG stream (exact canonical harness-core.js, zero artificial warmups)
 var SEED_STRING = "${safeSeed}";
 var seedGen = xmur3(SEED_STRING);
 var rand = sfc32(seedGen(), seedGen(), seedGen(), seedGen());
-// Canonical warmup: drop first 16 values as required by ALEATORY-001
-for (var i = 0; i < 16; i++) rand();
 
 // Override Math.random with deterministic stream
 Math.random = function() {

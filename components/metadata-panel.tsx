@@ -19,7 +19,7 @@ import {
     Info,
 } from "lucide-react";
 import { UnifiedToken } from "@/lib/data/types/token-types";
-import { AleatoryLogo } from "@/components/aleatory/AleatoryLogo";
+import AleatoryLogo from "@/components/aleatory/AleatoryLogo";
 
 interface MetadataPanelProps {
     nft: UnifiedToken | null;
