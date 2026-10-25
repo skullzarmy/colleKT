@@ -52,30 +52,30 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
     "classic-dark": {
         id: "classic-dark",
         name: "Classic Dark",
-        description: "Deep graphite walls with crisp neutral museum spotlighting",
-        swatchColor: "#222225",
+        description: "Deep charcoal museum walls with matte ebony flooring and focused art spotlighting",
+        swatchColor: "#16161a",
         walls: {
-            wallColor: "#222225",
-            floorColor: "#141416",
-            ceilingColor: "#0d0d0f",
-            roughness: 0.85,
-            metalness: 0.05,
+            wallColor: "#16161a", // Deep charcoal black
+            floorColor: "#0e0e11", // Matte ebony floor
+            ceilingColor: "#08080a",
+            roughness: 0.88,
+            metalness: 0.02,
         },
         lighting: {
-            ambient: { color: "#ffffff", intensity: 0.45 },
-            directional: { position: [10, 10, 5], color: "#ffffff", intensity: 0.85 },
-            fill: { position: [-10, 8, -5], color: "#d4d4d8", intensity: 0.4 },
-            point: { position: [0, 7.5, 0], color: "#ffffff", intensity: 0.5 },
+            ambient: { color: "#ffffff", intensity: 0.4 },
+            directional: { position: [10, 10, 5], color: "#ffffff", intensity: 1.0 },
+            fill: { position: [-10, 8, -5], color: "#a1a1aa", intensity: 0.35 },
+            point: { position: [0, 7.5, 0], color: "#ffffff", intensity: 0.45 },
         },
         frames: {
-            borderColor: "#333338",
+            borderColor: "#26262b",
             selectedColor: "#00bcd4",
-            hoverColor: "#55555e",
-            roughness: 0.3,
-            metalness: 0.7,
+            hoverColor: "#3f3f46",
+            roughness: 0.4,
+            metalness: 0.6,
         },
         door: {
-            frameColor: "#333338",
+            frameColor: "#26262b",
             portalColor: "#00bcd4",
         },
         ui: {
@@ -87,24 +87,24 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
     "museum-white": {
         id: "museum-white",
         name: "Museum White",
-        description: "Pristine white gallery walls with matte light limestone flooring",
-        swatchColor: "#f4f4f6",
+        description: "Pristine white cube gallery walls with pale limestone flooring and natural ambient daylight",
+        swatchColor: "#f8f9fa",
         walls: {
-            wallColor: "#f4f4f6",
-            floorColor: "#e4e4e9",
-            ceilingColor: "#fafafa",
-            roughness: 0.82,
+            wallColor: "#f8f9fa", // Pristine gallery white
+            floorColor: "#e2e4e8", // Matte light limestone terrazzo
+            ceilingColor: "#ffffff",
+            roughness: 0.85,
             metalness: 0.02,
         },
         lighting: {
-            ambient: { color: "#fffbf5", intensity: 0.65 },
-            directional: { position: [10, 12, 6], color: "#ffffff", intensity: 0.9 },
-            fill: { position: [-10, 10, -6], color: "#e4e4e7", intensity: 0.5 },
-            point: { position: [0, 8, 0], color: "#fffbf5", intensity: 0.6 },
+            ambient: { color: "#ffffff", intensity: 0.7 },
+            directional: { position: [10, 12, 6], color: "#ffffff", intensity: 0.95 },
+            fill: { position: [-10, 10, -6], color: "#e2e8f0", intensity: 0.45 },
+            point: { position: [0, 8, 0], color: "#ffffff", intensity: 0.55 },
         },
         frames: {
-            borderColor: "#1c1c1e",
-            selectedColor: "#2563eb",
+            borderColor: "#18181b",
+            selectedColor: "#2563eb", // Klein blue
             hoverColor: "#52525b",
             roughness: 0.4,
             metalness: 0.3,
@@ -119,109 +119,109 @@ export const GALLERY_STYLES: Record<GalleryStyleId, GalleryStyle> = {
             badgeText: "text-blue-700 bg-blue-100 border-blue-300",
         },
     },
-    "cyberpunk-neon": {
-        id: "cyberpunk-neon",
-        name: "Midnight Slate",
-        description: "Matte zinc-slate walls with quiet charcoal stone flooring and neutral museum track lighting",
-        swatchColor: "#18181b",
-        walls: {
-            wallColor: "#18181b",
-            floorColor: "#111113",
-            ceilingColor: "#0a0a0c",
-            roughness: 0.88, // Completely matte, zero glare or shiny reflections
-            metalness: 0.02,
-        },
-        lighting: {
-            ambient: { color: "#ffffff", intensity: 0.45 },
-            directional: { position: [10, 10, 5], color: "#ffffff", intensity: 0.9 },
-            fill: { position: [-10, 8, -5], color: "#71717a", intensity: 0.35 },
-            point: { position: [0, 7.5, 0], color: "#ffffff", intensity: 0.45 },
-        },
-        frames: {
-            borderColor: "#27272a",
-            selectedColor: "#38bdf8",
-            hoverColor: "#3f3f46",
-            roughness: 0.4,
-            metalness: 0.6,
-        },
-        door: {
-            frameColor: "#27272a",
-            portalColor: "#38bdf8",
-        },
-        ui: {
-            isLight: false,
-            accentColor: "#38bdf8",
-            badgeText: "text-sky-400 bg-sky-950/60 border-sky-800",
-        },
-    },
     "warm-solarium": {
         id: "warm-solarium",
-        name: "Warm Walnut",
-        description: "Soft gallery linen walls with rich matte walnut timber flooring and warm ambient lighting",
-        swatchColor: "#e6e2da",
+        name: "Warm Solarium",
+        description: "Sunlit gallery with warm French linen walls, natural European oak timber flooring, and golden hour light",
+        swatchColor: "#ede8df",
         walls: {
-            wallColor: "#e6e2da", // Warm linen gallery wall
-            floorColor: "#2e241c", // Matte rich walnut wood
-            ceilingColor: "#f0ece4",
-            roughness: 0.85, // Matte wood floor, zero shiny reflections
+            wallColor: "#ede8df", // Warm linen canvas
+            floorColor: "#8a6d4b", // Natural warm European oak hardwood
+            ceilingColor: "#f6f4ee",
+            roughness: 0.85,
             metalness: 0.02,
         },
         lighting: {
-            ambient: { color: "#fffaf2", intensity: 0.6 },
-            directional: { position: [10, 11, 5], color: "#fff8eb", intensity: 0.95 },
-            fill: { position: [-10, 8, -5], color: "#ede7dd", intensity: 0.4 },
-            point: { position: [0, 7.5, 0], color: "#fffaf2", intensity: 0.5 },
+            ambient: { color: "#fffbf0", intensity: 0.7 },
+            directional: { position: [10, 12, 5], color: "#fff5e4", intensity: 1.1 },
+            fill: { position: [-10, 9, -5], color: "#f0ebe1", intensity: 0.45 },
+            point: { position: [0, 8, 0], color: "#fffbf0", intensity: 0.55 },
         },
         frames: {
-            borderColor: "#3a2f26",
-            selectedColor: "#d97706", // Warm amber gold
-            hoverColor: "#57483c",
+            borderColor: "#423326",
+            selectedColor: "#d97706", // Amber gold
+            hoverColor: "#5e4936",
             roughness: 0.4,
-            metalness: 0.5,
+            metalness: 0.4,
         },
         door: {
-            frameColor: "#3a2f26",
+            frameColor: "#423326",
             portalColor: "#d97706",
         },
         ui: {
             isLight: true,
             accentColor: "#b45309",
-            badgeText: "text-amber-800 bg-amber-100 border-amber-300",
+            badgeText: "text-amber-900 bg-amber-100 border-amber-300",
         },
     },
     "minimal-spotlight": {
         id: "minimal-spotlight",
         name: "Brutalist Concrete",
-        description: "Tadao Ando smooth cast-concrete walls with deep matte basalt flooring and crisp museum lighting",
-        swatchColor: "#616469",
+        description: "Smooth architectural cast-concrete pavilion with honed basalt stone flooring and track lighting",
+        swatchColor: "#73767c",
         walls: {
-            wallColor: "#52555a", // Cast concrete
-            floorColor: "#18191b", // Matte basalt stone
-            ceilingColor: "#323438",
-            roughness: 0.92, // Deep matte stone, zero glare
+            wallColor: "#73767c", // Architectural cast concrete
+            floorColor: "#212327", // Honed matte basalt stone
+            ceilingColor: "#4d5055",
+            roughness: 0.92,
             metalness: 0.02,
         },
         lighting: {
-            ambient: { color: "#ffffff", intensity: 0.5 },
-            directional: { position: [9, 11, 5], color: "#ffffff", intensity: 1.0 },
-            fill: { position: [-9, 8, -5], color: "#8b8f96", intensity: 0.35 },
-            point: { position: [0, 7.5, 0], color: "#ffffff", intensity: 0.45 },
+            ambient: { color: "#f1f5f9", intensity: 0.55 },
+            directional: { position: [9, 12, 5], color: "#ffffff", intensity: 1.25 },
+            fill: { position: [-9, 8, -5], color: "#94a3b8", intensity: 0.35 },
+            point: { position: [0, 8, 0], color: "#ffffff", intensity: 0.45 },
         },
         frames: {
-            borderColor: "#222427",
-            selectedColor: "#f59e0b",
-            hoverColor: "#3d4045",
+            borderColor: "#1a1b1e",
+            selectedColor: "#f59e0b", // Safety amber
+            hoverColor: "#373a40",
             roughness: 0.4,
             metalness: 0.5,
         },
         door: {
-            frameColor: "#222427",
+            frameColor: "#1a1b1e",
             portalColor: "#f59e0b",
         },
         ui: {
             isLight: false,
             accentColor: "#f59e0b",
             badgeText: "text-amber-400 bg-amber-950/60 border-amber-700",
+        },
+    },
+    "cyberpunk-neon": {
+        id: "cyberpunk-neon",
+        name: "Neon Noir",
+        description: "Inky midnight obsidian void with electric cyan architectural accents and high-contrast art illumination",
+        swatchColor: "#090a0f",
+        walls: {
+            wallColor: "#090a0f", // Inky midnight obsidian
+            floorColor: "#050508", // Deep matte black floor
+            ceilingColor: "#030305",
+            roughness: 0.9,
+            metalness: 0.02,
+        },
+        lighting: {
+            ambient: { color: "#0e101a", intensity: 0.4 },
+            directional: { position: [10, 10, 5], color: "#ffffff", intensity: 1.15 }, // Pure white on art
+            fill: { position: [-10, 8, -5], color: "#94a3b8", intensity: 0.3 },
+            point: { position: [0, 7.5, 0], color: "#ffffff", intensity: 0.45 },
+        },
+        frames: {
+            borderColor: "#181920",
+            selectedColor: "#00f0ff", // Electric cyan
+            hoverColor: "#38bdf8",
+            roughness: 0.4,
+            metalness: 0.6,
+        },
+        door: {
+            frameColor: "#181920",
+            portalColor: "#00f0ff",
+        },
+        ui: {
+            isLight: false,
+            accentColor: "#00f0ff",
+            badgeText: "text-cyan-300 bg-cyan-950/70 border-cyan-700",
         },
     },
 };
