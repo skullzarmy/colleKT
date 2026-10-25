@@ -33,6 +33,19 @@ import {
     PLATFORM_REFERRER,
 } from "@/lib/tezos/market-service";
 import AleatoryFrame from "@/components/aleatory/AleatoryFrame";
+import { resolveIdentity, type ResolvedIdentity } from "@/lib/tezos/identity-resolver";
+
+interface CollectionDetails {
+    name?: string;
+    description?: string;
+    logo?: string;
+    contractAddress?: string;
+    creatorAddress?: string;
+    creatorAlias?: string;
+    floorPrice?: number;
+    items?: number;
+    editions?: number;
+}
 
 interface MediaModalProps {
     nft: UnifiedToken | null;
@@ -53,6 +66,11 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     // Artist aliases
     const [artistAliases, setArtistAliases] = useState<{ [address: string]: string | null }>({});
     const [isLoadingArtistAliases, setIsLoadingArtistAliases] = useState(false);
+
+    // Rich collection & contract metadata
+    const [collectionDetails, setCollectionDetails] = useState<CollectionDetails | null>(null);
+    const [isLoadingCollectionDetails, setIsLoadingCollectionDetails] = useState(false);
+    const [extraCreators, setExtraCreators] = useState<{ address: string; alias?: string | null }[]>([]);
 
     // Marketplace / Listing & Buying state
     const [listing, setListing] = useState<ActiveListing | null>(null);
@@ -85,6 +103,9 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             setIsDetecting(false);
             setArtistAliases({});
             setIsLoadingArtistAliases(false);
+            setCollectionDetails(null);
+            setIsLoadingCollectionDetails(false);
+            setExtraCreators([]);
             setListing(null);
             setIsLoadingListing(false);
             setIsBuying(false);
@@ -166,6 +187,152 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                     setListing(null);
                     setIsLoadingListing(false);
                 }
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [nft?.contractAddress, nft?.tokenId]);
+
+    // Fetch rich collection & creator metadata via Objkt GraphQL + TzKT fallback
+    useEffect(() => {
+        if (!nft?.contractAddress) return;
+
+        let isMounted = true;
+        setIsLoadingCollectionDetails(true);
+
+        const contract = nft.contractAddress;
+        const tokenId = String(nft.tokenId);
+
+        const query = `
+            query GetTokenAndFaMeta($contract: String!, $tokenId: String!) {
+                fa(where: { contract: { _eq: $contract } }, limit: 1) {
+                    name
+                    description
+                    logo
+                    contract
+                    creator_address
+                    floor_price
+                    items
+                    editions
+                }
+                token(where: { fa_contract: { _eq: $contract }, token_id: { _eq: $tokenId } }, limit: 1) {
+                    name
+                    description
+                    creators {
+                        creator_address
+                        holder {
+                            alias
+                        }
+                    }
+                    attributes {
+                        attribute {
+                            name
+                            value
+                        }
+                    }
+                }
+            }
+        `;
+
+        fetch("https://data.objkt.com/v3/graphql", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, variables: { contract, tokenId } }),
+        })
+            .then((res) => (res.ok ? res.json() : null))
+            .then(async (json) => {
+                if (!isMounted) return;
+
+                const fa = json?.data?.fa?.[0];
+                const tokenData = json?.data?.token?.[0];
+
+                if (fa) {
+                    let creatorAlias = fa.creator_address
+                        ? await resolveIdentity(fa.creator_address)
+                              .then((id: ResolvedIdentity) => id.displayName)
+                              .catch(() => null)
+                        : null;
+
+                    setCollectionDetails({
+                        name: fa.name || undefined,
+                        description: fa.description || undefined,
+                        logo: fa.logo || undefined,
+                        contractAddress: fa.contract || contract,
+                        creatorAddress: fa.creator_address || undefined,
+                        creatorAlias: creatorAlias || undefined,
+                        floorPrice: fa.floor_price ? fa.floor_price / 1_000_000 : undefined,
+                        items: fa.items || undefined,
+                        editions: fa.editions || undefined,
+                    });
+
+                    // If token creators were missing in nft.metadata, populate from tokenData or fa
+                    if (!nft.metadata?.creators || nft.metadata.creators.length === 0) {
+                        if (tokenData?.creators?.length > 0) {
+                            setExtraCreators(
+                                tokenData.creators.map((c: any) => ({
+                                    address: c.creator_address,
+                                    alias: c.holder?.alias || null,
+                                }))
+                            );
+                        } else if (fa.creator_address) {
+                            setExtraCreators([
+                                {
+                                    address: fa.creator_address,
+                                    alias: creatorAlias,
+                                },
+                            ]);
+                        }
+                    }
+                } else {
+                    // Fallback to TzKT contract
+                    const tzktRes = await fetch(`https://api.tzkt.io/v1/contracts/${contract}`);
+                    if (tzktRes.ok && isMounted) {
+                        const tzktData = await tzktRes.json();
+                        const cName = tzktData.metadata?.name || tzktData.alias;
+                        const cDesc = tzktData.metadata?.description;
+                        const cCreator = tzktData.creator?.address;
+                        const cCreatorAlias = tzktData.creator?.alias;
+
+                        setCollectionDetails({
+                            name: cName,
+                            description: cDesc,
+                            contractAddress: contract,
+                            creatorAddress: cCreator,
+                            creatorAlias: cCreatorAlias,
+                            items: tzktData.tokensCount || undefined,
+                        });
+
+                        if (!nft.metadata?.creators || nft.metadata.creators.length === 0) {
+                            if (cCreator) {
+                                setExtraCreators([{ address: cCreator, alias: cCreatorAlias }]);
+                            }
+                        }
+                    }
+                }
+                setIsLoadingCollectionDetails(false);
+            })
+            .catch(async (err) => {
+                console.warn("[MediaModal] Failed to fetch Objkt metadata:", err);
+                if (!isMounted) return;
+                try {
+                    const tzktRes = await fetch(`https://api.tzkt.io/v1/contracts/${contract}`);
+                    if (tzktRes.ok) {
+                        const tzktData = await tzktRes.json();
+                        setCollectionDetails({
+                            name: tzktData.metadata?.name || tzktData.alias,
+                            description: tzktData.metadata?.description,
+                            contractAddress: contract,
+                            creatorAddress: tzktData.creator?.address,
+                            creatorAlias: tzktData.creator?.alias,
+                            items: tzktData.tokensCount || undefined,
+                        });
+                        if ((!nft.metadata?.creators || nft.metadata.creators.length === 0) && tzktData.creator?.address) {
+                            setExtraCreators([{ address: tzktData.creator.address, alias: tzktData.creator.alias }]);
+                        }
+                    }
+                } catch {}
+                setIsLoadingCollectionDetails(false);
             });
 
         return () => {
@@ -280,9 +447,30 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
 
     const getCollectionDisplayName = () => {
         if (!nft) return "";
+        if (collectionDetails?.name) return collectionDetails.name;
         if (nft.contractAlias) return nft.contractAlias;
         return `${nft.contractAddress.slice(0, 8)}...${nft.contractAddress.slice(-4)}`;
     };
+
+    // Parse generative parameters from artifactUri (e.g. ?m0=0.443&m1=0.259... or ?seed=... or ?hash=...)
+    const getGenerativeParams = (): { name: string; value: string }[] => {
+        if (!nft) return [];
+        const rawUri = nft.metadata?.artifactUri || "";
+        const qIndex = rawUri.indexOf("?");
+        if (qIndex === -1) return [];
+
+        const paramsStr = rawUri.slice(qIndex + 1);
+        const searchParams = new URLSearchParams(paramsStr);
+        const list: { name: string; value: string }[] = [];
+
+        searchParams.forEach((val, key) => {
+            list.push({ name: key, value: val });
+        });
+
+        return list;
+    };
+
+    const generativeParams = getGenerativeParams();
 
     const getIPFSUrl = (uri: string) => {
         if (!uri) return "";
@@ -379,26 +567,49 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const mediaUri = getBestMediaUri();
     const mediaType = detectedMediaType || (isDetecting ? "image" : getMediaType());
 
-    // Fetch interactive code when HTML is detected or Aleatory is flagged
+    // Fetch interactive code when HTML / Generative is detected
     useEffect(() => {
         if (!nft || !mediaUri) return;
-        if ((mediaType === "html" || isAleatory) && !interactiveCode && !isLoadingCode) {
-            if (isAleatory) {
-                setIsLoadingCode(true);
-                fetch(mediaUri)
-                    .then((res) => res.text())
-                    .then((codeText) => {
-                        setInteractiveCode(codeText);
-                        setIsLoadingCode(false);
+        if ((mediaType === "html" || isAleatory || isEditArt) && !interactiveCode && !isLoadingCode) {
+            setIsLoadingCode(true);
+            fetch(mediaUri)
+                .then((res) => res.text())
+                .then((codeText) => {
+                    const qIndex = mediaUri.indexOf("?");
+                    const queryString = qIndex !== -1 ? mediaUri.slice(qIndex) : "";
+                    const baseUri = mediaUri.split("?")[0].replace(/\/?$/, "/");
+
+                    let prepared = codeText;
+
+                    // Strip any restrictive CSP meta tags and Cloudflare analytics beacon injections
+                    prepared = prepared.replace(/<meta[^>]*http-equiv=["']?Content-Security-Policy["']?[^>]*>/gi, "");
+                    prepared = prepared.replace(/<script[^>]*static\.cloudflareinsights\.com[^>]*><\/script>/gi, "");
+
+                    // Inject <base href="..."> so all relative paths (p5, textures, sounds) resolve from fileship
+                    if (!prepared.includes("<base ") && !prepared.includes("<base>")) {
+                        prepared = prepared.replace("<head>", `<head><base href="${baseUri}">`);
+                    }
+
+                    // Forward query string into window.location.search for srcDoc execution
+                    if (queryString) {
+                        prepared = prepared.replace(
+                            /window\.location\.search/g,
+                            `("${queryString}" || window.location.search)`
+                        );
+                    }
+
+                    setInteractiveCode(prepared);
+                    setIsLoadingCode(false);
+                    if (isAleatory) {
                         setUseAleatoryHarness(true);
-                    })
-                    .catch((e) => {
-                        console.warn("[MediaModal] Failed to fetch interactive code text:", e);
-                        setIsLoadingCode(false);
-                    });
-            }
+                    }
+                })
+                .catch((e) => {
+                    console.warn("[MediaModal] Failed to fetch interactive code text:", e);
+                    setIsLoadingCode(false);
+                });
         }
-    }, [nft, mediaType, isAleatory, mediaUri, interactiveCode, isLoadingCode]);
+    }, [nft, mediaType, isAleatory, isEditArt, mediaUri, interactiveCode, isLoadingCode]);
 
     const togglePlay = () => {
         if (videoRef.current) {
@@ -474,7 +685,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         } flex items-center justify-center bg-black rounded-lg overflow-hidden`;
 
         // Handle HTML / Interactive Content with Aleatory Frame Option
-        if (mediaType === "html" || (isAleatory && interactiveCode)) {
+        if (mediaType === "html" || isAleatory || isEditArt) {
             const htmlContainerClass = `relative w-full ${
                 isFullscreen ? "h-screen p-0" : "h-[70vh] p-2"
             } flex items-center justify-center bg-zinc-950 rounded-lg overflow-hidden`;
@@ -492,10 +703,16 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                 title={nft.metadata?.name || `Token #${nft.tokenId}`}
                                 onFeaturesReady={(features) => setExtractedFeatures(features)}
                             />
+                        ) : isLoadingCode ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-white bg-zinc-950">
+                                <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mb-3" />
+                                <p className="text-xs text-zinc-300 font-mono">Loading interactive artwork...</p>
+                            </div>
                         ) : (
                             <iframe
                                 ref={iframeRef}
-                                src={mediaUri}
+                                srcDoc={interactiveCode || undefined}
+                                src={!interactiveCode ? mediaUri : undefined}
                                 className="w-full h-full border-0"
                                 sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                                 title={`Interactive content for ${nft.metadata?.name || nft.tokenId}`}
@@ -952,16 +1169,20 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                 )}
 
                                 {/* Artist Info */}
-                                {nft.metadata?.creators && nft.metadata.creators.length > 0 && (
+                                {((nft.metadata?.creators && nft.metadata.creators.length > 0) || extraCreators.length > 0) && (
                                     <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800">
                                         <h4 className="mb-3 text-sm font-semibold text-zinc-200">Artist</h4>
                                         <div className="space-y-2">
-                                            {nft.metadata.creators.map((creatorAddress) => (
+                                            {(nft.metadata?.creators && nft.metadata.creators.length > 0
+                                                ? nft.metadata.creators
+                                                : extraCreators.map((c) => c.address)
+                                            ).map((creatorAddress) => (
                                                 <div key={creatorAddress} className="flex items-center justify-between">
                                                     <span className="text-sm text-zinc-100 font-medium">
                                                         {isLoadingArtistAliases
                                                             ? "Loading..."
                                                             : artistAliases[creatorAddress] ||
+                                                              extraCreators.find((c) => c.address === creatorAddress)?.alias ||
                                                               `${creatorAddress.slice(0, 10)}...`}
                                                     </span>
                                                     <button
@@ -981,28 +1202,77 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                 )}
 
                                 {/* Collection Info */}
-                                <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800">
-                                    <h4 className="mb-3 text-sm font-semibold text-zinc-200">Collection</h4>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm text-zinc-100 font-medium">{getCollectionDisplayName()}</span>
-                                            <button
-                                                onClick={() =>
-                                                    window.open(`https://tzkt.io/${nft.contractAddress}`, "_blank")
-                                                }
-                                                aria-label={`View TzKT contract for ${nft.contractAddress}`}
-                                                className="flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200 underline min-h-[36px]"
-                                            >
-                                                <ExternalLink size={12} />
-                                                <span>Contract</span>
-                                            </button>
+                                <div className="p-4 rounded-lg bg-zinc-900/80 border border-zinc-800 space-y-3">
+                                    <h4 className="text-sm font-semibold text-zinc-200">Collection</h4>
+                                    
+                                    <div className="flex items-start gap-3">
+                                        {collectionDetails?.logo && (
+                                            <img
+                                                src={collectionDetails.logo}
+                                                alt={`${getCollectionDisplayName()} logo`}
+                                                className="w-12 h-12 rounded-lg object-cover border border-zinc-700 bg-zinc-800 shrink-0"
+                                            />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-sm text-zinc-100 font-bold truncate">
+                                                    {getCollectionDisplayName()}
+                                                </span>
+                                                <button
+                                                    onClick={() =>
+                                                        window.open(`https://tzkt.io/${nft.contractAddress}`, "_blank")
+                                                    }
+                                                    aria-label={`View TzKT contract for ${nft.contractAddress}`}
+                                                    className="flex items-center gap-1 text-xs text-cyan-300 hover:text-cyan-200 underline shrink-0 min-h-[36px]"
+                                                >
+                                                    <ExternalLink size={12} />
+                                                    <span>Contract</span>
+                                                </button>
+                                            </div>
+                                            {collectionDetails?.creatorAlias && (
+                                                <p className="text-xs text-zinc-300 mt-0.5">
+                                                    Curated by{" "}
+                                                    <span className="text-cyan-300 font-medium">
+                                                        {collectionDetails.creatorAlias}
+                                                    </span>
+                                                </p>
+                                            )}
                                         </div>
-                                        <div>
-                                            <span className="block text-xs text-zinc-400">Address:</span>
-                                            <span className="font-mono text-xs text-zinc-300 break-all">
-                                                {nft.contractAddress}
-                                            </span>
+                                    </div>
+
+                                    {/* Stats Strip */}
+                                    {(collectionDetails?.items !== undefined || collectionDetails?.floorPrice !== undefined) && (
+                                        <div className="flex items-center gap-2 pt-1 text-[11px] font-mono text-zinc-300 border-t border-zinc-800/80">
+                                            {collectionDetails?.items !== undefined && (
+                                                <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700">
+                                                    {collectionDetails.items} items
+                                                </span>
+                                            )}
+                                            {collectionDetails?.editions !== undefined && (
+                                                <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700">
+                                                    {collectionDetails.editions} editions
+                                                </span>
+                                            )}
+                                            {collectionDetails?.floorPrice !== undefined && (
+                                                <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-cyan-300 font-semibold">
+                                                    Floor: {collectionDetails.floorPrice} ꜩ
+                                                </span>
+                                            )}
                                         </div>
+                                    )}
+
+                                    {/* Collection Description fallback */}
+                                    {collectionDetails?.description && (!nft.metadata?.description || nft.metadata.description !== collectionDetails.description) && (
+                                        <p className="text-xs leading-relaxed text-zinc-300 pt-1 border-t border-zinc-800/60 whitespace-pre-wrap">
+                                            {collectionDetails.description}
+                                        </p>
+                                    )}
+
+                                    <div>
+                                        <span className="block text-[11px] text-zinc-400">Contract Address:</span>
+                                        <span className="font-mono text-xs text-zinc-300 break-all select-all">
+                                            {nft.contractAddress}
+                                        </span>
                                     </div>
                                 </div>
 
@@ -1038,15 +1308,30 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     )}
                                 </div>
 
-                                {/* Attributes */}
-                                {nft.metadata?.attributes && nft.metadata.attributes.length > 0 && (
+                                {/* Attributes & Generative Parameters */}
+                                {((nft.metadata?.attributes && nft.metadata.attributes.length > 0) || generativeParams.length > 0) && (
                                     <div className="space-y-3">
-                                        <h4 className="text-sm font-semibold text-zinc-200">Attributes</h4>
+                                        <h4 className="text-sm font-semibold text-zinc-200 flex items-center justify-between">
+                                            <span>Attributes & Parameters</span>
+                                            {isEditArt && (
+                                                <span className="text-[10px] font-mono text-amber-300 uppercase">
+                                                    EditArt Variation
+                                                </span>
+                                            )}
+                                        </h4>
                                         <div className="grid grid-cols-2 gap-2">
-                                            {nft.metadata.attributes.map((attr, index) => (
-                                                <div key={index} className="p-2.5 bg-zinc-900/90 rounded border border-zinc-800">
+                                            {/* Standard attributes */}
+                                            {(nft.metadata?.attributes || []).map((attr, index) => (
+                                                <div key={`attr-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-zinc-800">
                                                     <p className="text-[10px] uppercase font-mono text-zinc-400 truncate">{attr.trait_type}</p>
                                                     <p className="text-xs font-semibold text-zinc-100 truncate">{String(attr.value)}</p>
+                                                </div>
+                                            ))}
+                                            {/* Generative URL parameters (e.g. m0, m1, etc.) */}
+                                            {generativeParams.map((param, index) => (
+                                                <div key={`param-${index}`} className="p-2.5 bg-zinc-900/90 rounded border border-amber-900/40">
+                                                    <p className="text-[10px] uppercase font-mono text-amber-400/90 truncate">{param.name}</p>
+                                                    <p className="text-xs font-mono font-semibold text-white truncate">{param.value}</p>
                                                 </div>
                                             ))}
                                         </div>

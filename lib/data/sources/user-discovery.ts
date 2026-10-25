@@ -98,7 +98,6 @@ export async function fetchUserCollections(address: string): Promise<DiscoveredC
                                     curators: { curator_address: { _eq: $address } }
                                     gallery_id: { _like: "KT1%" }
                                     items: { _gt: 0 }
-                                    _not: { tokens: { token: { decimals: { _gt: 0 } } } }
                                 }
                                 order_by: { inserted_at: desc }
                                 limit: 50
