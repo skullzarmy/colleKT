@@ -413,14 +413,10 @@ export default function MediaContent({
                 for (const testUri of uriChain) {
                     allUris.push(testUri);
 
-                    // Add IPFS gateway variants for IPFS URIs
+                    // Add IPFS gateway URI using cached multisource fileship.xyz
                     if (testUri.startsWith("ipfs://")) {
-                        const cid = testUri.replace("ipfs://", "");
-                        allUris.push(
-                            `https://ipfs.fileship.xyz/${cid}`,
-                            `https://ipfs.io/ipfs/${cid}`,
-                            `https://cloudflare-ipfs.com/ipfs/${cid}`
-                        );
+                        const cid = testUri.replace("ipfs://", "").replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
+                        allUris.push(`https://ipfs.fileship.xyz/${cid}`);
                     }
                 }
 

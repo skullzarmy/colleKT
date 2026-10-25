@@ -284,7 +284,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         return `${nft.contractAddress.slice(0, 8)}...${nft.contractAddress.slice(-4)}`;
     };
 
-    const getIPFSUrl = (uri: string, preferStandardGateway = false) => {
+    const getIPFSUrl = (uri: string) => {
         if (!uri) return "";
         if (uri.startsWith("data:")) return uri;
 
@@ -292,9 +292,6 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             let withoutProtocol = uri.replace("ipfs://", "");
             // Handle CID followed directly by query params without trailing slash, e.g. Qm123?m0=... -> Qm123/?m0=...
             withoutProtocol = withoutProtocol.replace(/^([a-zA-Z0-9]+)\?/, "$1/?");
-            if (preferStandardGateway) {
-                return `https://ipfs.io/ipfs/${withoutProtocol}`;
-            }
             return `https://ipfs.fileship.xyz/${withoutProtocol}`;
         }
         return uri;
@@ -369,9 +366,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
     const getBestMediaUri = () => {
         const rawUri = getRawMediaUri();
         if (!rawUri) return null;
-        const type = detectedMediaType || getMediaType();
-        const isHtml = type === "html";
-        return getIPFSUrl(rawUri, isHtml);
+        return getIPFSUrl(rawUri);
     };
 
     const getAudioCoverUri = () => {
