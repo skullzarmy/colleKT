@@ -111,7 +111,7 @@ export default function ShareModal({
                         <Share2 className="w-5 h-5 text-cyan-400" aria-hidden="true" />
                         <span>Share Gallery</span>
                     </DialogTitle>
-                    <DialogDescription className="text-zinc-400 text-sm">
+                    <DialogDescription className="text-zinc-200 text-sm">
                         Customize how this 3D gallery loads with URL parameters, then copy or share.
                     </DialogDescription>
                 </DialogHeader>
@@ -227,7 +227,7 @@ export default function ShareModal({
                         className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors min-h-[44px] ${
                             activeTab === "link"
                                 ? "border-cyan-400 text-white font-semibold"
-                                : "border-transparent text-zinc-400 hover:text-zinc-200"
+                                : "border-transparent text-zinc-300 hover:text-white"
                         }`}
                     >
                         Share Link
@@ -239,7 +239,7 @@ export default function ShareModal({
                         className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors min-h-[44px] flex items-center gap-1.5 ${
                             activeTab === "qr"
                                 ? "border-cyan-400 text-white font-semibold"
-                                : "border-transparent text-zinc-400 hover:text-zinc-200"
+                                : "border-transparent text-zinc-300 hover:text-white"
                         }`}
                     >
                         <QrCode className="w-3.5 h-3.5" aria-hidden="true" />
@@ -252,7 +252,7 @@ export default function ShareModal({
                         className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors min-h-[44px] flex items-center gap-1.5 ${
                             activeTab === "embed"
                                 ? "border-cyan-400 text-white font-semibold"
-                                : "border-transparent text-zinc-400 hover:text-zinc-200"
+                                : "border-transparent text-zinc-300 hover:text-white"
                         }`}
                     >
                         <Code className="w-3.5 h-3.5" aria-hidden="true" />
@@ -338,7 +338,7 @@ export default function ShareModal({
                                 aria-label="QR Code to open this 3D gallery on mobile"
                             />
                         </div>
-                        <p className="text-xs text-zinc-400 text-center max-w-xs">
+                        <p className="text-xs text-zinc-200 text-center max-w-xs font-medium">
                             Scan with a smartphone or tablet to instantly open this 3D gallery in mobile view.
                         </p>
                     </div>

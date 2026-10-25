@@ -111,19 +111,19 @@ export default function HomePage() {
 
                     {/* Example Prompts */}
                     <div className="space-y-2 mt-6 text-center">
-                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Examples:</p>
+                        <p className="text-xs font-bold text-zinc-200 uppercase tracking-wider">Examples:</p>
                         <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
                             <button
                                 type="button"
                                 onClick={() => setInput("skllzrmy.tez")}
-                                className="px-2.5 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-600 focus-visible:ring-2 focus-visible:ring-white transition-colors"
+                                className="px-3 py-1.5 rounded-full bg-zinc-900 border-2 border-zinc-700 text-zinc-200 hover:text-white hover:border-zinc-500 focus-visible:ring-2 focus-visible:ring-cyan-400 transition-colors font-medium"
                             >
                                 skllzrmy.tez
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setInput("tz1Qi77tcJn9foeHHP1QHj6UX1m1vLVLMbuY")}
-                                className="px-2.5 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-600 focus-visible:ring-2 focus-visible:ring-white transition-colors"
+                                className="px-3 py-1.5 rounded-full bg-zinc-900 border-2 border-zinc-700 text-zinc-200 hover:text-white hover:border-zinc-500 focus-visible:ring-2 focus-visible:ring-cyan-400 transition-colors font-medium"
                             >
                                 tz1Qi7...MbuY
                             </button>
@@ -131,19 +131,19 @@ export default function HomePage() {
                                 type="button"
                                 onClick={() =>
                                     setInput(
-                                        "https://objkt.com/curations/objkt/long-story-short-graphic-novel-by-swarleyart-b264a749"
+                                        "https://objkt.com/curations/objkt/skllzrmy's-objkt4objkt-selections-98e9ba49"
                                     )
                                 }
-                                className="px-2.5 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-600 focus-visible:ring-2 focus-visible:ring-white transition-colors"
+                                className="px-3 py-1.5 rounded-full bg-zinc-900 border-2 border-zinc-700 text-zinc-200 hover:text-white hover:border-zinc-500 focus-visible:ring-2 focus-visible:ring-cyan-400 transition-colors font-medium"
                             >
                                 Objkt Curation
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setInput("KT1VLVcGTw6UkwzMiPAn8SNcoMjicitQBGF6")}
-                                className="px-2.5 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-600 focus-visible:ring-2 focus-visible:ring-white transition-colors"
+                                onClick={() => setInput("KT1JJ9snHHDUeTdBhjWyjPZZ5M1g9z1DEnGx")}
+                                className="px-3 py-1.5 rounded-full bg-zinc-900 border-2 border-zinc-700 text-zinc-200 hover:text-white hover:border-zinc-500 focus-visible:ring-2 focus-visible:ring-cyan-400 transition-colors font-medium"
                             >
-                                Contract Collection
+                                Flowers for Piero
                             </button>
                         </div>
                     </div>
