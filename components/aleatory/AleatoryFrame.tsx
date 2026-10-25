@@ -9,6 +9,7 @@ interface AleatoryFrameProps {
     seed?: string;
     params?: Record<string, unknown>;
     title?: string;
+    freezeClock?: boolean;
     onFeaturesReady?: (features: Record<string, string | number | boolean>) => void;
 }
 
@@ -17,14 +18,15 @@ export default function AleatoryFrame({
     seed,
     params,
     title = "ALEATORY-001 Generative Artwork",
+    freezeClock = false,
     onFeaturesReady,
 }: AleatoryFrameProps) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const htmlContent = useMemo(() => {
-        return buildAleatoryHarnessHtml(code, seed, params);
-    }, [code, seed, params]);
+        return buildAleatoryHarnessHtml(code, seed, params, { freezeClock });
+    }, [code, seed, params, freezeClock]);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -43,7 +45,7 @@ export default function AleatoryFrame({
     }, [onFeaturesReady]);
 
     return (
-        <div className="relative w-full h-full min-h-[400px] bg-black flex items-center justify-center overflow-hidden rounded-lg">
+        <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden rounded-lg">
             {isLoading && (
                 <div
                     className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10 text-white"
@@ -58,10 +60,10 @@ export default function AleatoryFrame({
                 srcDoc={htmlContent}
                 title={title}
                 sandbox="allow-scripts"
-                className="w-full h-full border-0"
+                className="w-full h-full max-h-full aspect-square border-0 mx-auto"
                 onLoad={() => {
                     // Fallback timeout if piece does not explicitly call $alea.ready()
-                    setTimeout(() => setIsLoading(false), 1500);
+                    setTimeout(() => setIsLoading(false), 2000);
                 }}
             />
         </div>
