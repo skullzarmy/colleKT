@@ -1186,14 +1186,14 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
         >
             <div className={`${isFullscreen ? "p-0" : "p-4"} w-full h-full flex flex-col`}>
                 {/* Header Controls */}
-                <div className="flex items-center justify-between p-4 bg-zinc-950/80 border-b border-zinc-800">
-                    <div className="flex items-start gap-3">
-                        <div>
-                            <h2 id="media-modal-title" className="text-xl font-bold text-white">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 bg-zinc-950/80 border-b border-zinc-800">
+                    <div className="flex items-start gap-3 min-w-0">
+                        <div className="min-w-0">
+                            <h2 id="media-modal-title" className="text-lg sm:text-xl font-bold text-white truncate max-w-[280px] sm:max-w-md md:max-w-lg">
                                 {nft.metadata?.name || `Token #${nft.tokenId}`}
                             </h2>
                             {nft.metadata?.creators && nft.metadata.creators.length > 0 && (
-                                <p className="mt-1 text-sm text-zinc-300">
+                                <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-zinc-300 truncate">
                                     by{" "}
                                     <button
                                         onClick={() =>
@@ -1211,8 +1211,8 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             )}
                         </div>
 
-                        <div className="flex items-center gap-1.5 mt-1">
-                            <Badge variant="outline" className="text-zinc-300 border-zinc-700 bg-zinc-900/60">
+                        <div className="flex items-center gap-1.5 mt-1 flex-shrink-0">
+                            <Badge variant="outline" className="text-zinc-300 border-zinc-700 bg-zinc-900/60 text-xs">
                                 {mediaType.toUpperCase()}
                             </Badge>
                             {isAleatory && (
@@ -1228,7 +1228,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap ml-auto">
                         {isAleatory && (
                             <div className="flex items-center gap-1 bg-zinc-900/95 p-1 rounded-lg border border-zinc-700 shadow-sm">
                                 <Button
@@ -1310,16 +1310,16 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                 </div>
 
                 {/* Main Content Area */}
-                <div className="flex flex-1 overflow-hidden">
+                <div className="flex flex-col lg:flex-row flex-1 overflow-hidden overflow-y-auto lg:overflow-y-hidden">
                     {/* Media Viewer */}
-                    <div className={`${showMetadata ? "flex-1" : "w-full"} flex items-center justify-center p-4`}>
+                    <div className={`${showMetadata ? "flex-1" : "w-full"} flex items-center justify-center p-2 sm:p-4 min-h-[50vh] lg:min-h-0`}>
                         {renderMedia()}
                     </div>
 
                     {/* Metadata Sidebar */}
                     {showMetadata && (
                         <div
-                            className="overflow-y-auto transition-transform duration-300 ease-out transform translate-x-0 border-l border-zinc-800 w-96 bg-zinc-950/95 backdrop-blur-md"
+                            className="overflow-y-auto transition-transform duration-300 ease-out transform translate-x-0 border-t lg:border-t-0 lg:border-l border-zinc-800 w-full lg:w-96 bg-zinc-950/95 backdrop-blur-md flex-shrink-0"
                             style={{ animation: "slideInFromRight 300ms ease-out" }}
                         >
                             <div className="p-6 space-y-6">

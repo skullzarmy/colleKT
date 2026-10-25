@@ -131,14 +131,14 @@ export default function RoomNavigation({
 
     return (
         <TooltipProvider>
-            <div className={`fixed z-50 transform -translate-x-1/2 bottom-4 left-1/2 ${styleConfig.typography.fontFamily}`}>
+            <div className={`fixed z-50 transform -translate-x-1/2 bottom-3 left-1/2 sm:bottom-4 ${styleConfig.typography.fontFamily}`}>
                 <div
                     style={{ backgroundColor: solidBg }}
                     className={`
                         ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}
                         rounded-2xl border shadow-2xl transition-all duration-300 ease-in-out
-                        ${isExpanded ? "px-3 py-3 sm:px-6 sm:py-4" : "px-2.5 py-2 sm:px-4 sm:py-3"}
-                        max-w-[92vw] sm:max-w-none
+                        ${isExpanded ? "px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3" : "px-2 py-1.5 sm:px-3 sm:py-2"}
+                        max-w-[90vw] sm:max-w-md
                     `}
                     onMouseEnter={() => setIsExpanded(true)}
                     onMouseLeave={() => {
