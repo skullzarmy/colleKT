@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { useViewState } from "@/contexts/ViewStateContext";
 
-export default function GalleryFooter() {
+interface GalleryFooterProps {
+    isEmbed?: boolean;
+}
+
+export default function GalleryFooter({ isEmbed = false }: GalleryFooterProps) {
     const { styleConfig } = useViewState();
+    if (isEmbed) return null;
     const currentYear = new Date().getFullYear();
     const displayYear = currentYear === 2025 ? currentYear : `2025-${currentYear}`;
 

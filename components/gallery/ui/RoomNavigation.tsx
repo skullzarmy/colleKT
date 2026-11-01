@@ -12,6 +12,9 @@ interface RoomNavigationProps {
     onPrevRoom: () => void;
     onNextRoom: () => void;
     onGoToRoom?: (roomNumber: number) => void;
+    isEmbed?: boolean;
+    isCompact?: boolean;
+    isShort?: boolean;
 }
 
 export default function RoomNavigation({
@@ -22,6 +25,9 @@ export default function RoomNavigation({
     onPrevRoom,
     onNextRoom,
     onGoToRoom,
+    isEmbed = false,
+    isCompact = false,
+    isShort = false,
 }: RoomNavigationProps) {
     const { styleConfig } = useViewState();
     const [isExpanded, setIsExpanded] = useState(false);
@@ -129,18 +135,30 @@ export default function RoomNavigation({
         ? "#18191d"
         : "#09090b";
 
+    // Responsive positioning: in embeds or compact views, stay pinned near the top edge
+    const positionClasses = isEmbed
+        ? "top-2 left-1/2 -translate-x-1/2"
+        : isCompact
+        ? "top-12 left-1/2 -translate-x-1/2"
+        : "top-14 sm:top-auto sm:bottom-4 left-1/2 -translate-x-1/2";
+
     return (
         <TooltipProvider>
-            <div className={`fixed z-40 transform -translate-x-1/2 top-16 left-1/2 sm:top-auto sm:bottom-4 sm:left-1/2 sm:z-50 ${styleConfig.typography.fontFamily}`}>
+            <div className={`fixed z-40 transform ${positionClasses} ${styleConfig.typography.fontFamily}`}>
                 <div
                     style={{ backgroundColor: solidBg }}
                     className={`
                         ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}
-                        rounded-2xl border shadow-2xl transition-all duration-300 ease-in-out
-                        ${isExpanded ? "px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3" : "px-2 py-1.5 sm:px-3 sm:py-2"}
-                        max-w-[92vw] sm:max-w-md
+                        border shadow-2xl transition-all duration-300 ease-in-out
+                        ${
+                            isExpanded
+                                ? "rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3 max-w-[92vw] sm:max-w-md"
+                                : isCompact
+                                ? "rounded-full px-1.5 py-1"
+                                : "rounded-2xl px-2 py-1.5 sm:px-3 sm:py-2 max-w-[92vw] sm:max-w-md"
+                        }
                     `}
-                    onMouseEnter={() => setIsExpanded(true)}
+                    onMouseEnter={() => !isCompact && setIsExpanded(true)}
                     onMouseLeave={() => {
                         setIsExpanded(false);
                         setShowJumpInput(false);
@@ -149,26 +167,32 @@ export default function RoomNavigation({
                 >
                     {/* Compact view */}
                     {!isExpanded && (
-                        <div className="flex items-center gap-1.5 sm:gap-3">
+                        <div className={`flex items-center ${isCompact ? "gap-1" : "gap-1.5 sm:gap-3"}`}>
                             <button
                                 onClick={onPrevRoom}
                                 disabled={currentRoom === 0}
                                 aria-label={`Previous room (Room ${currentRoom})`}
-                                className={`p-1.5 sm:p-2 transition-colors rounded-full min-w-[32px] min-h-[32px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
+                                className={`${
+                                    isCompact
+                                        ? "p-1 min-w-[26px] min-h-[26px]"
+                                        : "p-1.5 sm:p-2 min-w-[32px] min-h-[32px] sm:min-w-[36px] sm:min-h-[36px]"
+                                } transition-colors rounded-full flex items-center justify-center ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
                             >
-                                <ChevronLeft size={16} className={textPrimary} aria-hidden="true" />
+                                <ChevronLeft size={isCompact ? 13 : 16} className={textPrimary} aria-hidden="true" />
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => setIsExpanded(true)}
                                 aria-label="Expand room navigation"
-                                className="flex flex-col items-center min-w-[56px] sm:min-w-[80px] cursor-pointer hover:opacity-85 transition-opacity"
+                                className={`flex flex-col items-center ${
+                                    isCompact ? "min-w-[48px] px-1" : "min-w-[56px] sm:min-w-[80px]"
+                                } cursor-pointer hover:opacity-85 transition-opacity`}
                             >
-                                <span className={`text-xs font-semibold sm:text-sm ${textPrimary}`}>
+                                <span className={`${isCompact ? "text-[11px]" : "text-xs sm:text-sm"} font-semibold ${textPrimary}`}>
                                     {currentRoom + 1}/{totalRooms}
                                 </span>
-                                <div className="relative w-12 h-1.5 mt-1 sm:w-16">
+                                <div className={`relative ${isCompact ? "w-10 h-1 mt-0.5" : "w-12 h-1.5 mt-1 sm:w-16"}`}>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <div
@@ -206,9 +230,13 @@ export default function RoomNavigation({
                                 onClick={onNextRoom}
                                 disabled={currentRoom === totalRooms - 1}
                                 aria-label={`Next room (Room ${currentRoom + 2})`}
-                                className={`p-1.5 sm:p-2 transition-colors rounded-full min-w-[32px] min-h-[32px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
+                                className={`${
+                                    isCompact
+                                        ? "p-1 min-w-[26px] min-h-[26px]"
+                                        : "p-1.5 sm:p-2 min-w-[32px] min-h-[32px] sm:min-w-[36px] sm:min-h-[36px]"
+                                } transition-colors rounded-full flex items-center justify-center ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
                             >
-                                <ChevronRight size={16} className={textPrimary} aria-hidden="true" />
+                                <ChevronRight size={isCompact ? 13 : 16} className={textPrimary} aria-hidden="true" />
                             </button>
                         </div>
                     )}

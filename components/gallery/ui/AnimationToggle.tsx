@@ -1,18 +1,47 @@
 "use client";
 
 import { Switch } from "@/components/ui/switch";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Sparkles } from "lucide-react";
 import { useViewState } from "@/contexts/ViewStateContext";
 
 interface AnimationToggleProps {
     className?: string;
+    compact?: boolean;
 }
 
-export function AnimationToggle({ className = "" }: AnimationToggleProps) {
+export function AnimationToggle({ className = "", compact = false }: AnimationToggleProps) {
     const { animationsEnabled, setAnimationsEnabled, styleConfig } = useViewState();
 
     const iconColor = styleConfig.ui.isLight ? "text-zinc-700" : "text-zinc-300";
     const textColor = styleConfig.ui.isLight ? "text-zinc-800" : "text-zinc-200";
+
+    // Compact single-button toggle for mobile viewports, small iframes, and constrained containers
+    if (compact) {
+        return (
+            <button
+                type="button"
+                onClick={() => setAnimationsEnabled(!animationsEnabled)}
+                aria-pressed={animationsEnabled}
+                aria-label={animationsEnabled ? "Disable ambient gallery animations" : "Enable ambient gallery animations"}
+                title={animationsEnabled ? "Animations: ON (tap to turn off)" : "Animations: OFF (tap to turn on)"}
+                className={`relative w-7 h-7 sm:w-8 sm:h-8 rounded-lg border transition-all flex items-center justify-center ${
+                    animationsEnabled
+                        ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-sm"
+                        : styleConfig.ui.isLight
+                        ? "bg-zinc-100 hover:bg-zinc-200 text-zinc-600 border-zinc-300"
+                        : "bg-zinc-900/90 hover:bg-zinc-800 text-zinc-400 border-zinc-700"
+                } ${className}`}
+            >
+                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                {animationsEnabled && (
+                    <span
+                        className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+                        style={{ backgroundColor: styleConfig.ui.accentColor }}
+                    />
+                )}
+            </button>
+        );
+    }
 
     return (
         <div className={`flex items-center gap-2 ${className}`}>
