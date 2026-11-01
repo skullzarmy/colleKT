@@ -298,12 +298,8 @@ export default function WalkController({ hallwayLength = 30, hallwayWidth = 12 }
             -Math.cos(yawRef.current)
         ).normalize();
 
-        // Right vector: 90 degrees clockwise from forward (facing forward along +Z, right is +X)
-        const right = new THREE.Vector3(
-            forward.z,
-            0,
-            -forward.x
-        ).normalize();
+        // Right vector: forward x camera.up (camera's relative right)
+        const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
 
         // 1. Forward / Backward (Keyboard W/S, Arrow Up/Down, or Joystick Y)
         if (keys.w || keys.arrowUp) {
