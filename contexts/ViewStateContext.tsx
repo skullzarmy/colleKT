@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useMemo } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useRef } from "react";
 import {
     type GalleryStyleId,
     type GalleryStyle,
@@ -9,6 +9,13 @@ import {
 } from "@/lib/gallery/gallery-styles";
 
 export type CameraMode = "walk" | "overview";
+
+export interface MoveInput {
+    x: number; // -1 to 1 (strafe)
+    y: number; // -1 to 1 (forward/backward)
+    up: boolean;
+    down: boolean;
+}
 
 interface ViewStateContextType {
     cameraMode: CameraMode;
@@ -19,6 +26,11 @@ interface ViewStateContextType {
     setStyle: (style: GalleryStyleId) => void;
     styleConfig: GalleryStyle;
     prefersReducedMotion: boolean;
+    moveInputRef: React.MutableRefObject<MoveInput>;
+    resetViewSignalRef: React.MutableRefObject<number>;
+    setMoveInput: (input: Partial<MoveInput>) => void;
+    resetMoveInput: () => void;
+    triggerResetView: () => void;
 }
 
 const ViewStateContext = createContext<ViewStateContextType | undefined>(undefined);
@@ -28,6 +40,22 @@ export function ViewStateProvider({ children }: { children: React.ReactNode }) {
     const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(false);
     const [currentStyle, setCurrentStyle] = useState<GalleryStyleId>(DEFAULT_GALLERY_STYLE);
     const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(false);
+
+    // High performance movement input refs for 60/120fps physics loop without re-renders
+    const moveInputRef = useRef<MoveInput>({ x: 0, y: 0, up: false, down: false });
+    const resetViewSignalRef = useRef<number>(0);
+
+    const setMoveInput = (input: Partial<MoveInput>) => {
+        Object.assign(moveInputRef.current, input);
+    };
+
+    const resetMoveInput = () => {
+        moveInputRef.current = { x: 0, y: 0, up: false, down: false };
+    };
+
+    const triggerResetView = () => {
+        resetViewSignalRef.current += 1;
+    };
 
     // Read reduced-motion and URL parameters on mount
     useEffect(() => {
@@ -90,6 +118,11 @@ export function ViewStateProvider({ children }: { children: React.ReactNode }) {
                 setStyle: setCurrentStyle,
                 styleConfig,
                 prefersReducedMotion,
+                moveInputRef,
+                resetViewSignalRef,
+                setMoveInput,
+                resetMoveInput,
+                triggerResetView,
             }}
         >
             {children}
