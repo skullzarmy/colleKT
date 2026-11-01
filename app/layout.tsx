@@ -24,13 +24,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
-        <html lang="en" className="dark">
+        <html lang="en" className="dark h-full">
             <head>
                 <meta name="apple-mobile-web-app-title" content="colleKT" />
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
             </head>
-            <body className={inter.className} suppressHydrationWarning>
+            <body className={`${inter.className} h-full`} suppressHydrationWarning>
                 <WalletProvider>
                     <ViewStateProvider>{children}</ViewStateProvider>
                 </WalletProvider>

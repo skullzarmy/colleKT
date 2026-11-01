@@ -113,7 +113,11 @@ export default function Gallery3D({
     }
 
     return (
-        <div ref={containerRef} className="relative w-full h-full min-h-screen overflow-hidden">
+        <div
+            ref={containerRef}
+            className="relative w-full h-screen h-[100dvh] overflow-hidden"
+            style={{ width: "100%", height: "100%", minHeight: "100%" }}
+        >
             <Canvas
                 shadows
                 camera={{ fov: 60 }}
@@ -124,7 +128,8 @@ export default function Gallery3D({
                 }}
                 dpr={[1, 2]}
                 performance={{ min: 0.5 }}
-                className="touch-none select-none"
+                className="w-full h-full touch-none select-none"
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
             >
                 <Suspense
                     fallback={

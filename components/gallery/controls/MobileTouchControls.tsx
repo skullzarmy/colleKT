@@ -20,7 +20,7 @@ export default function MobileTouchControls({
     const [showHint, setShowHint] = useState(true);
 
     const baseRef = useRef<HTMLDivElement>(null);
-    const pointerIdRef = useRef<number | null>(null);
+    const activeTrackingIdRef = useRef<number | string | null>(null);
 
     // Max movement radius for joystick knob in pixels
     const MAX_RADIUS = isCompact ? 28 : 36;
@@ -45,65 +45,116 @@ export default function MobileTouchControls({
         return () => clearTimeout(timer);
     }, []);
 
-    // Pointer events for joystick (supports mouse drag and touch seamlessly)
-    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (pointerIdRef.current !== null) return;
+    const updateJoystickFromCoords = useCallback(
+        (clientX: number, clientY: number) => {
+            if (!baseRef.current) return;
+            const rect = baseRef.current.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
 
-        pointerIdRef.current = e.pointerId;
-        e.currentTarget.setPointerCapture(e.pointerId);
-        setIsDragging(true);
-        setShowHint(false);
+            let deltaX = clientX - centerX;
+            let deltaY = clientY - centerY;
 
-        updateJoystick(e.clientX, e.clientY);
-    };
+            const distance = Math.hypot(deltaX, deltaY);
+            if (distance > MAX_RADIUS) {
+                deltaX = (deltaX / distance) * MAX_RADIUS;
+                deltaY = (deltaY / distance) * MAX_RADIUS;
+            }
 
-    const updateJoystick = useCallback((clientX: number, clientY: number) => {
-        if (!baseRef.current) return;
-        const rect = baseRef.current.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
+            setKnobPos({ x: deltaX, y: deltaY });
 
-        let deltaX = clientX - centerX;
-        let deltaY = clientY - centerY;
+            // Normalize to -1 ... 1
+            const normX = deltaX / MAX_RADIUS;
+            const normY = deltaY / MAX_RADIUS;
+            setMoveInput({ x: normX, y: normY });
+        },
+        [MAX_RADIUS, setMoveInput]
+    );
 
-        const distance = Math.hypot(deltaX, deltaY);
-        if (distance > MAX_RADIUS) {
-            deltaX = (deltaX / distance) * MAX_RADIUS;
-            deltaY = (deltaY / distance) * MAX_RADIUS;
-        }
-
-        setKnobPos({ x: deltaX, y: deltaY });
-
-        // Normalize to -1 ... 1
-        const normX = deltaX / MAX_RADIUS;
-        const normY = deltaY / MAX_RADIUS;
-        setMoveInput({ x: normX, y: normY });
-    }, [MAX_RADIUS, setMoveInput]);
-
-    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (pointerIdRef.current !== e.pointerId) return;
-        e.preventDefault();
-        e.stopPropagation();
-        updateJoystick(e.clientX, e.clientY);
-    };
-
-    const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (pointerIdRef.current !== e.pointerId) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        try {
-            e.currentTarget.releasePointerCapture(e.pointerId);
-        } catch {
-            // Pointer may already be released
-        }
-
-        pointerIdRef.current = null;
+    const stopJoystick = useCallback(() => {
+        activeTrackingIdRef.current = null;
         setIsDragging(false);
         setKnobPos({ x: 0, y: 0 });
         resetMoveInput();
+    }, [resetMoveInput]);
+
+    // Global touch & pointer listeners on window for seamless tracking in iframes
+    useEffect(() => {
+        const handleWindowTouchMove = (e: TouchEvent) => {
+            if (activeTrackingIdRef.current === null) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === activeTrackingIdRef.current) {
+                    if (e.cancelable) e.preventDefault();
+                    updateJoystickFromCoords(touch.clientX, touch.clientY);
+                    break;
+                }
+            }
+        };
+
+        const handleWindowTouchEnd = (e: TouchEvent) => {
+            if (activeTrackingIdRef.current === null) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === activeTrackingIdRef.current) {
+                    stopJoystick();
+                    break;
+                }
+            }
+        };
+
+        const handleWindowPointerMove = (e: PointerEvent) => {
+            if (activeTrackingIdRef.current === e.pointerId) {
+                e.preventDefault();
+                updateJoystickFromCoords(e.clientX, e.clientY);
+            }
+        };
+
+        const handleWindowPointerUp = (e: PointerEvent) => {
+            if (activeTrackingIdRef.current === e.pointerId) {
+                stopJoystick();
+            }
+        };
+
+        window.addEventListener("touchmove", handleWindowTouchMove, { passive: false });
+        window.addEventListener("touchend", handleWindowTouchEnd);
+        window.addEventListener("touchcancel", handleWindowTouchEnd);
+        window.addEventListener("pointermove", handleWindowPointerMove);
+        window.addEventListener("pointerup", handleWindowPointerUp);
+        window.addEventListener("pointercancel", handleWindowPointerUp);
+
+        return () => {
+            window.removeEventListener("touchmove", handleWindowTouchMove);
+            window.removeEventListener("touchend", handleWindowTouchEnd);
+            window.removeEventListener("touchcancel", handleWindowTouchEnd);
+            window.removeEventListener("pointermove", handleWindowPointerMove);
+            window.removeEventListener("pointerup", handleWindowPointerUp);
+            window.removeEventListener("pointercancel", handleWindowPointerUp);
+        };
+    }, [updateJoystickFromCoords, stopJoystick]);
+
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+        e.stopPropagation();
+        if (e.cancelable) e.preventDefault();
+        const touch = e.changedTouches[0];
+        if (!touch) return;
+
+        activeTrackingIdRef.current = touch.identifier;
+        setIsDragging(true);
+        setShowHint(false);
+        updateJoystickFromCoords(touch.clientX, touch.clientY);
+    };
+
+    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        // Pointer down fallback for mouse/stylus
+        if (activeTrackingIdRef.current !== null) return;
+        e.stopPropagation();
+        e.preventDefault();
+
+        activeTrackingIdRef.current = e.pointerId;
+        setIsDragging(true);
+        setShowHint(false);
+        updateJoystickFromCoords(e.clientX, e.clientY);
     };
 
     if (!isTouchDevice) return null;
@@ -138,12 +189,22 @@ export default function MobileTouchControls({
                 <div className={`flex ${isCompact ? "flex-row gap-1 mb-1.5" : "flex-col gap-1.5 pb-1"}`}>
                     {/* Height Up */}
                     <button
+                        onTouchStart={(e) => {
+                            e.stopPropagation();
+                            if (e.cancelable) e.preventDefault();
+                            setMoveInput({ up: true });
+                        }}
+                        onTouchEnd={(e) => {
+                            e.stopPropagation();
+                            setMoveInput({ up: false });
+                        }}
                         onPointerDown={(e) => {
+                            e.stopPropagation();
                             e.preventDefault();
                             setMoveInput({ up: true });
                         }}
                         onPointerUp={(e) => {
-                            e.preventDefault();
+                            e.stopPropagation();
                             setMoveInput({ up: false });
                         }}
                         onPointerLeave={() => setMoveInput({ up: false })}
@@ -158,12 +219,22 @@ export default function MobileTouchControls({
 
                     {/* Height Down */}
                     <button
+                        onTouchStart={(e) => {
+                            e.stopPropagation();
+                            if (e.cancelable) e.preventDefault();
+                            setMoveInput({ down: true });
+                        }}
+                        onTouchEnd={(e) => {
+                            e.stopPropagation();
+                            setMoveInput({ down: false });
+                        }}
                         onPointerDown={(e) => {
+                            e.stopPropagation();
                             e.preventDefault();
                             setMoveInput({ down: true });
                         }}
                         onPointerUp={(e) => {
-                            e.preventDefault();
+                            e.stopPropagation();
                             setMoveInput({ down: false });
                         }}
                         onPointerLeave={() => setMoveInput({ down: false })}
@@ -192,10 +263,8 @@ export default function MobileTouchControls({
                 {/* Virtual Joystick */}
                 <div
                     ref={baseRef}
+                    onTouchStart={handleTouchStart}
                     onPointerDown={handlePointerDown}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerCancel={handlePointerUp}
                     aria-label="Walk movement joystick"
                     role="slider"
                     aria-valuetext={`X: ${Math.round((knobPos.x / MAX_RADIUS) * 100)}%, Y: ${Math.round((knobPos.y / MAX_RADIUS) * 100)}%`}

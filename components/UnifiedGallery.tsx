@@ -688,7 +688,12 @@ export default function UnifiedGallery({
     }
 
     return (
-        <div className="relative min-h-screen bg-black">
+        <div
+            className={`relative w-full ${
+                use3D ? "h-screen h-[100dvh] overflow-hidden" : "min-h-screen"
+            } bg-black`}
+            style={{ height: use3D ? "100%" : undefined }}
+        >
             {/* Header (hidden in embed mode) */}
             {!isEmbed && (
                 <header className="absolute top-0 left-0 right-0 z-50 p-2.5 sm:p-4 flex items-center justify-between gap-1.5 sm:gap-2 pointer-events-none">
