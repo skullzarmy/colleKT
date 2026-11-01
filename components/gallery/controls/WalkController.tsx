@@ -192,9 +192,9 @@ export default function WalkController({ hallwayLength = 30, hallwayWidth = 12 }
                     const deltaY = touch.clientY - lastTouchPos.y;
                     lastTouchPos = { x: touch.clientX, y: touch.clientY };
 
-                    // Update yaw (turn left/right) and pitch (tilt up/down)
-                    yawRef.current -= deltaX * lookSensitivity;
-                    pitchRef.current -= deltaY * lookSensitivity;
+                    // Natural "Grab the World" touch drag: the room follows the direction of the finger
+                    yawRef.current += deltaX * lookSensitivity;
+                    pitchRef.current += deltaY * lookSensitivity;
                     pitchRef.current = Math.max(-maxPitch, Math.min(maxPitch, pitchRef.current));
                     break;
                 }
@@ -225,8 +225,9 @@ export default function WalkController({ hallwayLength = 30, hallwayWidth = 12 }
             const deltaY = e.clientY - lastMousePos.y;
             lastMousePos = { x: e.clientX, y: e.clientY };
 
-            yawRef.current -= deltaX * (lookSensitivity * 0.9);
-            pitchRef.current -= deltaY * (lookSensitivity * 0.9);
+            // Natural "Grab the World" mouse drag: the room follows the cursor
+            yawRef.current += deltaX * (lookSensitivity * 0.9);
+            pitchRef.current += deltaY * (lookSensitivity * 0.9);
             pitchRef.current = Math.max(-maxPitch, Math.min(maxPitch, pitchRef.current));
         };
 
@@ -275,10 +276,10 @@ export default function WalkController({ hallwayLength = 30, hallwayWidth = 12 }
 
         // Turning keys (Q/E or ArrowLeft/ArrowRight)
         if (keys.q || keys.arrowLeft) {
-            yawRef.current += turnSpeed * delta;
+            yawRef.current -= turnSpeed * delta; // Turn Left towards left wall (-X)
         }
         if (keys.e || keys.arrowRight) {
-            yawRef.current -= turnSpeed * delta;
+            yawRef.current += turnSpeed * delta; // Turn Right towards right wall (+X)
         }
 
         // Apply camera rotation using Euler order YXZ (pitch then yaw, roll=0)
