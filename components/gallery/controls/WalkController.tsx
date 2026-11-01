@@ -168,10 +168,11 @@ export default function WalkController({ hallwayLength = 30, hallwayWidth = 12 }
         const handleTouchStart = (e: TouchEvent) => {
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
-                // Ignore touch if it starts inside the movement joystick area (bottom-left)
-                const isBottomLeft =
-                    touch.clientX < 150 && touch.clientY > window.innerHeight - 200;
-                if (isBottomLeft) continue;
+                // Check if touch starts on UI element or joystick
+                const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (isInteractiveElement(touch.target) || isInteractiveElement(elementUnderTouch)) {
+                    continue;
+                }
 
                 if (activeLookTouchId === null) {
                     activeLookTouchId = touch.identifier;

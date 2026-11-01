@@ -179,8 +179,10 @@ export default function UnifiedGallery({
     // Use shared view state instead of local state
     const { cameraMode, setCameraMode } = useViewState();
 
-    // Check for embed mode in URL params
-    const isEmbed = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("embed") === "true";
+    // Check for embed mode in URL params or iframe environment
+    const isEmbed =
+        typeof window !== "undefined" &&
+        (new URLSearchParams(window.location.search).get("embed") === "true" || window.self !== window.top);
 
     // Detect gallery type from current pathname
     const getGalleryType = (): "USER" | "CURATION" | "COLLECTION" => {
@@ -777,7 +779,8 @@ export default function UnifiedGallery({
                         currentRoom={currentRoom}
                         onRoomChange={updateRoomInUrl}
                         totalNFTs={totalNFTs}
-                        topOffset={64} // 64px to avoid overlapping with Back button
+                        topOffset={isEmbed ? 0 : 64}
+                        isEmbed={isEmbed}
                     />
                 </ErrorBoundary>
             ) : (

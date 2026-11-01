@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment, Html } from "@react-three/drei";
 import { UnifiedToken } from "../lib/data/types/token-types";
@@ -25,6 +25,7 @@ interface Gallery3DProps {
     totalNFTs?: number; // Total NFTs in the collection for calculating total rooms
     // Layout coordination props to avoid UI overlaps
     topOffset?: number; // Offset from top to avoid overlapping with page headers
+    isEmbed?: boolean;
 }
 
 const NFTS_PER_ROOM = 20;
@@ -40,9 +41,40 @@ export default function Gallery3D({
     onRoomChange,
     totalNFTs = 0,
     topOffset = 0, // Default to no offset
+    isEmbed = false,
 }: Gallery3DProps) {
     const [currentRoom, setCurrentRoom] = useState(initialRoom);
     const { cameraMode, setCameraMode } = useViewState();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+
+    // Track exact container dimensions via ResizeObserver for responsive iframe/embed/mobile layouts
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const updateDims = () => {
+            if (containerRef.current) {
+                setContainerDimensions({
+                    width: containerRef.current.clientWidth,
+                    height: containerRef.current.clientHeight,
+                });
+            }
+        };
+        updateDims();
+
+        const observer = new ResizeObserver(updateDims);
+        observer.observe(containerRef.current);
+        window.addEventListener("resize", updateDims);
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener("resize", updateDims);
+        };
+    }, []);
+
+    // Layout flags based on container dimensions
+    const isCompact = containerDimensions.width > 0 ? containerDimensions.width < 540 : false;
+    const isUltraCompact = containerDimensions.width > 0 ? containerDimensions.width < 380 : false;
+    const isShort = containerDimensions.height > 0 ? containerDimensions.height < 460 : false;
 
     // Update local room state when prop changes
     useEffect(() => {
@@ -81,7 +113,7 @@ export default function Gallery3D({
     }
 
     return (
-        <div className="relative w-full h-screen">
+        <div ref={containerRef} className="relative w-full h-full min-h-screen overflow-hidden">
             <Canvas
                 shadows
                 camera={{ fov: 60 }}
@@ -128,8 +160,12 @@ export default function Gallery3D({
                 </Suspense>
             </Canvas>
 
-            {/* Gallery Controls - Bottom Left */}
-            <GalleryControls />
+            {/* Gallery Controls - Adapts to compact / embed / desktop */}
+            <GalleryControls
+                isCompact={isCompact}
+                isUltraCompact={isUltraCompact}
+                isEmbed={isEmbed}
+            />
 
             {/* Room Navigation UI */}
             <RoomNavigation
@@ -141,13 +177,18 @@ export default function Gallery3D({
                 onPrevRoom={handlePrevRoom}
                 onNextRoom={handleNextRoom}
                 onGoToRoom={onRoomChange}
+                isEmbed={isEmbed}
+                isCompact={isCompact}
+                isShort={isShort}
             />
 
             {/* Mobile Touch Movement Joystick & Helpers - In walk mode */}
-            {cameraMode === "walk" && <MobileTouchControls />}
+            {cameraMode === "walk" && (
+                <MobileTouchControls isCompact={isCompact} isShort={isShort} />
+            )}
 
             {/* Footer */}
-            <GalleryFooter />
+            <GalleryFooter isEmbed={isEmbed} />
         </div>
     );
 }
