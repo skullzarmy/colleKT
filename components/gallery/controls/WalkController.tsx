@@ -262,6 +262,7 @@ export default function WalkController({ hallwayLength = 30, hallwayWidth = 12 }
             lastResetSignalRef.current = resetViewSignalRef.current;
             yawRef.current = Math.PI; // Look straight forward into the gallery (+Z)
             pitchRef.current = 0;
+            camera.position.y = 4.0;
         }
 
         const keys = keysRef.current;
@@ -296,37 +297,33 @@ export default function WalkController({ hallwayLength = 30, hallwayWidth = 12 }
             -Math.cos(yawRef.current)
         ).normalize();
 
+        // Right vector: 90 degrees clockwise from forward (facing forward along +Z, right is +X)
         const right = new THREE.Vector3(
-            -forward.z,
+            forward.z,
             0,
-            forward.x
+            -forward.x
         ).normalize();
 
         // 1. Forward / Backward (Keyboard W/S, Arrow Up/Down, or Joystick Y)
         if (keys.w || keys.arrowUp) {
             velocity.add(forward.clone().multiplyScalar(moveSpeed));
-        } else if (joy.y < -0.08) {
-            // Joystick pushed forward (negative Y in screen coords)
-            velocity.add(forward.clone().multiplyScalar(moveSpeed * Math.abs(joy.y)));
         }
-
         if (keys.s || keys.arrowDown) {
             velocity.add(forward.clone().multiplyScalar(-moveSpeed));
-        } else if (joy.y > 0.08) {
-            // Joystick pushed backward (positive Y in screen coords)
+        }
+        if (Math.abs(joy.y) > 0.08) {
+            // joy.y is negative when pushed up/forward, positive when pushed down/backward
             velocity.add(forward.clone().multiplyScalar(-moveSpeed * joy.y));
         }
 
         // 2. Strafe Left / Right (Keyboard A/D, or Joystick X)
         if (keys.a) {
             velocity.add(right.clone().multiplyScalar(-moveSpeed));
-        } else if (joy.x < -0.08) {
-            velocity.add(right.clone().multiplyScalar(moveSpeed * joy.x));
         }
-
         if (keys.d) {
             velocity.add(right.clone().multiplyScalar(moveSpeed));
-        } else if (joy.x > 0.08) {
+        }
+        if (Math.abs(joy.x) > 0.08) {
             velocity.add(right.clone().multiplyScalar(moveSpeed * joy.x));
         }
 
