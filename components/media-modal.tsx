@@ -1184,12 +1184,12 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
             aria-labelledby="media-modal-title"
             className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md"
         >
-            <div className={`${isFullscreen ? "p-0" : "p-4"} w-full h-full flex flex-col`}>
+            <div className={`${isFullscreen ? "p-0" : "p-0 sm:p-2 md:p-4"} w-full h-full flex flex-col`}>
                 {/* Header Controls */}
-                <div className="flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 bg-zinc-950/80 border-b border-zinc-800">
-                    <div className="flex items-start gap-3 min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 sm:p-4 bg-zinc-950/90 border-b border-zinc-800">
+                    <div className="flex items-start gap-2.5 min-w-0">
                         <div className="min-w-0">
-                            <h2 id="media-modal-title" className="text-lg sm:text-xl font-bold text-white truncate max-w-[280px] sm:max-w-md md:max-w-lg">
+                            <h2 id="media-modal-title" className="text-base sm:text-lg md:text-xl font-bold text-white truncate max-w-[200px] sm:max-w-md md:max-w-lg">
                                 {nft.metadata?.name || `Token #${nft.tokenId}`}
                             </h2>
                             {nft.metadata?.creators && nft.metadata.creators.length > 0 && (
@@ -1211,17 +1211,17 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             )}
                         </div>
 
-                        <div className="flex items-center gap-1.5 mt-1 flex-shrink-0">
-                            <Badge variant="outline" className="text-zinc-300 border-zinc-700 bg-zinc-900/60 text-xs">
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-shrink-0">
+                            <Badge variant="outline" className="text-zinc-300 border-zinc-700 bg-zinc-900/60 text-[10px] sm:text-xs">
                                 {mediaType.toUpperCase()}
                             </Badge>
                             {isAleatory && (
-                                <Badge className="bg-cyan-950 text-cyan-300 border border-cyan-800 text-xs">
-                                    ALEATORY-001
+                                <Badge className="bg-cyan-950 text-cyan-300 border border-cyan-800 text-[10px] sm:text-xs">
+                                    ALEA
                                 </Badge>
                             )}
                             {isEditArt && (
-                                <Badge className="bg-amber-950 text-amber-300 border border-amber-800 text-xs">
+                                <Badge className="bg-amber-950 text-amber-300 border border-amber-800 text-[10px] sm:text-xs">
                                     EDITART
                                 </Badge>
                             )}
@@ -1238,12 +1238,12 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     aria-pressed={viewMode === "live"}
                                     className={
                                         viewMode === "live"
-                                            ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs h-7 px-2.5 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                            : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-7 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                            ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs h-7 px-2 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                            : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-7 px-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
                                     }
                                 >
-                                    <AleatoryLogo size={14} className="mr-1.5" />
-                                    Live Render
+                                    <AleatoryLogo size={13} className="mr-1" />
+                                    <span>Live</span>
                                 </Button>
                                 <Button
                                     onClick={() => setViewMode("static")}
@@ -1252,12 +1252,12 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                     aria-pressed={viewMode === "static"}
                                     className={
                                         viewMode === "static"
-                                            ? "bg-zinc-700 hover:bg-zinc-600 text-white font-medium text-xs h-7 px-2.5 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
-                                            : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-7 px-2.5 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                            ? "bg-zinc-700 hover:bg-zinc-600 text-white font-medium text-xs h-7 px-2 shadow-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                            : "text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs h-7 px-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
                                     }
                                 >
-                                    <ImageIcon size={13} className="mr-1.5 text-zinc-400" />
-                                    Static Preview
+                                    <ImageIcon size={13} className="mr-1 text-zinc-400" />
+                                    <span>Static</span>
                                 </Button>
                             </div>
                         )}
@@ -1269,9 +1269,9 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                                 size="sm"
                                 aria-label="Reload artwork"
                                 title="Reload artwork"
-                                className="text-white border bg-zinc-900/60 hover:bg-zinc-800 hover:text-white border-zinc-700 min-h-[44px] min-w-[44px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                className="text-white border bg-zinc-900/60 hover:bg-zinc-800 hover:text-white border-zinc-700 min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
                             >
-                                <RotateCcw size={16} />
+                                <RotateCcw size={15} />
                             </Button>
                         )}
 
@@ -1281,10 +1281,10 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             size="sm"
                             aria-expanded={showMetadata}
                             aria-label={showMetadata ? "Hide token details" : "Show token details"}
-                            className="text-white border bg-zinc-900/60 hover:bg-zinc-800 hover:text-white border-zinc-700 min-h-[44px] px-3 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                            className="text-white border bg-zinc-900/60 hover:bg-zinc-800 hover:text-white border-zinc-700 min-h-[36px] sm:min-h-[40px] px-2.5 sm:px-3 text-xs sm:text-sm focus-visible:ring-2 focus-visible:ring-cyan-400"
                         >
-                            <Info size={16} className="mr-2 text-zinc-300" />
-                            {showMetadata ? "Hide" : "Show"} Details
+                            <Info size={15} className="mr-1.5 text-zinc-300" />
+                            <span className="hidden xs:inline">{showMetadata ? "Hide" : "Show"}</span> Details
                         </Button>
 
                         <Button
@@ -1292,9 +1292,9 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             variant="ghost"
                             size="sm"
                             aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                            className="text-white border bg-zinc-900/60 hover:bg-zinc-800 hover:text-white border-zinc-700 min-h-[44px] min-w-[44px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
+                            className="text-white border bg-zinc-900/60 hover:bg-zinc-800 hover:text-white border-zinc-700 min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] p-2 focus-visible:ring-2 focus-visible:ring-cyan-400"
                         >
-                            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                            {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                         </Button>
 
                         <Button
@@ -1302,7 +1302,7 @@ export default function MediaModal({ nft, onClose }: MediaModalProps) {
                             variant="ghost"
                             size="sm"
                             aria-label="Close modal"
-                            className="text-white border bg-zinc-900/60 hover:bg-red-950/40 hover:text-red-200 border-zinc-700 min-h-[44px] min-w-[44px] p-2 focus-visible:ring-2 focus-visible:ring-red-400"
+                            className="text-white border bg-zinc-900/60 hover:bg-red-950/40 hover:text-red-200 border-zinc-700 min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] p-2 focus-visible:ring-2 focus-visible:ring-red-400"
                         >
                             <X size={16} />
                         </Button>

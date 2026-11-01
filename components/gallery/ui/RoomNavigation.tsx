@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Hash, Dices } from "lucide-react";
+import { ChevronLeft, ChevronRight, Hash, Dices, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useViewState } from "@/contexts/ViewStateContext";
 
@@ -131,14 +131,14 @@ export default function RoomNavigation({
 
     return (
         <TooltipProvider>
-            <div className={`fixed z-50 transform -translate-x-1/2 bottom-3 left-1/2 sm:bottom-4 ${styleConfig.typography.fontFamily}`}>
+            <div className={`fixed z-40 transform -translate-x-1/2 top-16 left-1/2 sm:top-auto sm:bottom-4 sm:left-1/2 sm:z-50 ${styleConfig.typography.fontFamily}`}>
                 <div
                     style={{ backgroundColor: solidBg }}
                     className={`
                         ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}
                         rounded-2xl border shadow-2xl transition-all duration-300 ease-in-out
                         ${isExpanded ? "px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3" : "px-2 py-1.5 sm:px-3 sm:py-2"}
-                        max-w-[90vw] sm:max-w-md
+                        max-w-[92vw] sm:max-w-md
                     `}
                     onMouseEnter={() => setIsExpanded(true)}
                     onMouseLeave={() => {
@@ -149,17 +149,22 @@ export default function RoomNavigation({
                 >
                     {/* Compact view */}
                     {!isExpanded && (
-                        <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="flex items-center gap-1.5 sm:gap-3">
                             <button
                                 onClick={onPrevRoom}
                                 disabled={currentRoom === 0}
                                 aria-label={`Previous room (Room ${currentRoom})`}
-                                className={`p-2 transition-colors rounded-full min-w-[36px] min-h-[36px] flex items-center justify-center ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
+                                className={`p-1.5 sm:p-2 transition-colors rounded-full min-w-[32px] min-h-[32px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
                             >
                                 <ChevronLeft size={16} className={textPrimary} aria-hidden="true" />
                             </button>
 
-                            <div className="flex flex-col items-center min-w-[64px] sm:min-w-[80px]">
+                            <button
+                                type="button"
+                                onClick={() => setIsExpanded(true)}
+                                aria-label="Expand room navigation"
+                                className="flex flex-col items-center min-w-[56px] sm:min-w-[80px] cursor-pointer hover:opacity-85 transition-opacity"
+                            >
                                 <span className={`text-xs font-semibold sm:text-sm ${textPrimary}`}>
                                     {currentRoom + 1}/{totalRooms}
                                 </span>
@@ -195,13 +200,13 @@ export default function RoomNavigation({
                                         )}
                                     </Tooltip>
                                 </div>
-                            </div>
+                            </button>
 
                             <button
                                 onClick={onNextRoom}
                                 disabled={currentRoom === totalRooms - 1}
                                 aria-label={`Next room (Room ${currentRoom + 2})`}
-                                className={`p-2 transition-colors rounded-full min-w-[36px] min-h-[36px] flex items-center justify-center ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
+                                className={`p-1.5 sm:p-2 transition-colors rounded-full min-w-[32px] min-h-[32px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
                             >
                                 <ChevronRight size={16} className={textPrimary} aria-hidden="true" />
                             </button>
@@ -336,15 +341,29 @@ export default function RoomNavigation({
                                 </div>
                             )}
 
-                            <button
-                                onClick={onNextRoom}
-                                disabled={currentRoom === totalRooms - 1}
-                                aria-label={`Next room (Room ${currentRoom + 2})`}
-                                className={`flex items-center gap-1 px-3 py-2 transition-colors rounded-lg min-h-[36px] ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
-                            >
-                                <span className={`text-xs font-medium sm:text-sm ${textPrimary}`}>Next</span>
-                                <ChevronRight size={16} className={textPrimary} aria-hidden="true" />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={onNextRoom}
+                                    disabled={currentRoom === totalRooms - 1}
+                                    aria-label={`Next room (Room ${currentRoom + 2})`}
+                                    className={`flex items-center gap-1 px-3 py-2 transition-colors rounded-lg min-h-[36px] ${btnClasses} ${focusRingClasses} disabled:cursor-not-allowed`}
+                                >
+                                    <span className={`text-xs font-medium sm:text-sm ${textPrimary}`}>Next</span>
+                                    <ChevronRight size={16} className={textPrimary} aria-hidden="true" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsExpanded(false);
+                                        setShowJumpInput(false);
+                                        setJumpInput("");
+                                    }}
+                                    aria-label="Close navigation panel"
+                                    className={`sm:hidden p-2 transition-colors rounded-lg min-h-[36px] min-w-[36px] flex items-center justify-center ${btnClasses}`}
+                                >
+                                    <X size={14} className={textPrimary} aria-hidden="true" />
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

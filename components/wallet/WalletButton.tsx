@@ -79,7 +79,7 @@ export default function WalletButton() {
                         aria-label={`Wallet connected as ${displayName}. Open wallet menu`}
                     >
                         <UserCheck className="w-4 h-4 mr-2 text-emerald-400" aria-hidden="true" />
-                        <span className="font-semibold tracking-wide">{displayName}</span>
+                        <span className="font-semibold tracking-wide max-w-[110px] sm:max-w-[180px] truncate">{displayName}</span>
                         {sourceBadge && (
                             <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase font-bold rounded bg-zinc-800 text-cyan-300 border border-zinc-700">
                                 {sourceBadge}

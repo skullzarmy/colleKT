@@ -4,7 +4,7 @@ import { useEffect, useState, Component } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw, LayoutGrid, Box } from "lucide-react";
 import { useViewState } from "@/contexts/ViewStateContext";
 import { useTezosDomain } from "@/hooks/use-tezos-domain";
 import { useGalleryMetadata } from "@/hooks/use-gallery-metadata";
@@ -689,57 +689,61 @@ export default function UnifiedGallery({
         <div className="relative min-h-screen bg-black">
             {/* Header (hidden in embed mode) */}
             {!isEmbed && (
-                <header className="absolute top-0 left-0 right-0 z-50 p-3 sm:p-4 flex items-center justify-between gap-2 pointer-events-none">
+                <header className="absolute top-0 left-0 right-0 z-50 p-2.5 sm:p-4 flex items-center justify-between gap-1.5 sm:gap-2 pointer-events-none">
                     <div className="pointer-events-auto">
                         <Button
                             onClick={() => router.push("/")}
                             variant="outline"
-                            className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px] px-3 text-xs sm:text-sm"
+                            className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px] px-2.5 sm:px-3 text-xs sm:text-sm rounded-lg"
                             aria-label="Back to home"
                         >
-                            <ArrowLeft className="w-4 h-4 mr-1.5 sm:mr-2" aria-hidden="true" />
-                            Back
+                            <ArrowLeft className="w-4 h-4 mr-1 sm:mr-1.5" aria-hidden="true" />
+                            <span className="hidden xs:inline">Back</span>
                         </Button>
                     </div>
 
-                    <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-                        <div className="px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm font-medium whitespace-nowrap">
-                            {getHeaderInfoText()}
+                    <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 justify-end">
+                        <div className="px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm font-medium whitespace-nowrap">
+                            <span className="hidden sm:inline">{getHeaderInfoText()}</span>
+                            <span className="sm:hidden">{totalNFTs > 0 ? `${nfts.length}/${totalNFTs}` : `${nfts.length} NFTs`}</span>
                         </div>
                         <Button
                             onClick={handleRefresh}
                             variant="outline"
-                            className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px] min-w-[36px] p-2"
+                            className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px] min-w-[36px] p-2 rounded-lg"
                             disabled={loading}
                             title="Refresh collection and rebuild cache"
                             aria-label="Refresh collection and rebuild cache"
                         >
-                            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
+                            <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
                         </Button>
-                        {!isMobile && (
-                            <Button
-                                onClick={() => {
-                                    setGalleryError(null);
-                                    setUse3D(!use3D);
-                                }}
-                                variant="outline"
-                                className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px] px-2.5 sm:px-3 text-xs sm:text-sm whitespace-nowrap"
-                                aria-label={use3D ? "Switch to 2D accessible grid view" : "Switch to 3D immersive gallery view"}
-                            >
-                                {use3D ? "Switch to 2D" : "Switch to 3D"}
-                            </Button>
-                        )}
-                        {isMobile && (
-                            <div className="px-2.5 py-1 text-xs text-white/70 rounded bg-black/50 backdrop-blur-sm whitespace-nowrap">
-                                Mobile 2D Mode
-                            </div>
-                        )}
+                        <Button
+                            onClick={() => {
+                                setGalleryError(null);
+                                setUse3D(!use3D);
+                            }}
+                            variant="outline"
+                            className="text-white hover:text-white bg-black/60 border border-white/20 hover:bg-zinc-800 backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-h-[36px] px-2.5 sm:px-3 text-xs sm:text-sm whitespace-nowrap rounded-lg flex items-center gap-1.5"
+                            aria-label={use3D ? "Switch to 2D accessible grid view" : "Switch to 3D immersive gallery view"}
+                        >
+                            {use3D ? (
+                                <>
+                                    <LayoutGrid className="w-3.5 h-3.5" aria-hidden="true" />
+                                    <span>2D</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Box className="w-3.5 h-3.5" aria-hidden="true" />
+                                    <span>3D</span>
+                                </>
+                            )}
+                        </Button>
                     </div>
                 </header>
             )}
 
-            {/* 3D Gallery with Error Boundary - Desktop only */}
-            {use3D && !isMobile ? (
+            {/* 3D Gallery with Error Boundary */}
+            {use3D ? (
                 <ErrorBoundary
                     fallback={
                         <div className="flex items-center justify-center min-h-screen bg-black">

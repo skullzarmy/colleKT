@@ -7,6 +7,7 @@ import GalleryTitle from "./gallery-title";
 import GalleryControls from "./gallery/ui/GalleryControls";
 import RoomNavigation from "./gallery/ui/RoomNavigation";
 import GalleryFooter from "./gallery/ui/GalleryFooter";
+import MobileTouchControls from "./gallery/controls/MobileTouchControls";
 import { useViewState } from "@/contexts/ViewStateContext";
 import LoadingAnimation from "./LoadingAnimation";
 
@@ -91,6 +92,7 @@ export default function Gallery3D({
                 }}
                 dpr={[1, 2]}
                 performance={{ min: 0.5 }}
+                className="touch-none select-none"
             >
                 <Suspense
                     fallback={
@@ -140,6 +142,9 @@ export default function Gallery3D({
                 onNextRoom={handleNextRoom}
                 onGoToRoom={onRoomChange}
             />
+
+            {/* Mobile Touch Movement Joystick & Helpers - In walk mode */}
+            {cameraMode === "walk" && <MobileTouchControls />}
 
             {/* Footer */}
             <GalleryFooter />

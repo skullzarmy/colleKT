@@ -36,10 +36,10 @@ export default function GalleryControls() {
         : "focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
 
     return (
-        <div className={`fixed z-40 pointer-events-auto bottom-3 left-3 sm:bottom-4 sm:left-4 ${styleConfig.typography.fontFamily}`}>
+        <div className={`fixed z-40 pointer-events-auto bottom-4 right-3 sm:bottom-4 sm:right-auto sm:left-4 ${styleConfig.typography.fontFamily}`}>
             <div
                 style={{ backgroundColor: solidBg }}
-                className={`flex flex-row items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 border rounded-xl shadow-2xl transition-colors duration-200 ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}`}
+                className={`flex flex-row items-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 border rounded-xl shadow-2xl transition-colors duration-200 ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText}`}
             >
                 {/* Camera Mode Buttons */}
                 <div className="flex items-center gap-1 sm:gap-1.5" role="group" aria-label="Camera perspective">
@@ -58,11 +58,11 @@ export default function GalleryControls() {
                                 ? "font-semibold border-transparent"
                                 : inactiveBtnClasses
                         } px-2 sm:px-2.5 py-1 sm:py-1.5`}
-                        title="Walk Mode - WASD to move, Q/E to turn"
+                        title="Walk Mode - WASD or Touch Joystick to move, drag to turn"
                         aria-label="First person walk mode"
                     >
                         <User className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span className="text-xs">Walk</span>
+                        <span className="text-xs hidden sm:inline">Walk</span>
                     </Button>
 
                     <Button
@@ -84,7 +84,7 @@ export default function GalleryControls() {
                         aria-label="Bird's eye overview mode"
                     >
                         <Map className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span className="text-xs">Overview</span>
+                        <span className="text-xs hidden sm:inline">Overview</span>
                     </Button>
                 </div>
 
@@ -107,14 +107,14 @@ export default function GalleryControls() {
                                 className={`w-3.5 h-3.5 ${styleConfig.ui.isLight ? "text-zinc-700" : "text-zinc-300"}`}
                                 aria-hidden="true"
                             />
-                            <span className="text-xs font-medium max-w-[80px] sm:max-w-none truncate">{styleConfig.name}</span>
+                            <span className="text-xs font-medium max-w-[70px] sm:max-w-none truncate hidden sm:inline">{styleConfig.name}</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                        align="start"
+                        align="end"
                         side="top"
                         style={{ backgroundColor: solidBg }}
-                        className={`w-56 p-1.5 mb-2 shadow-2xl ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText} ${styleConfig.typography.fontFamily}`}
+                        className={`w-56 p-1.5 mb-2 shadow-2xl sm:align-start ${styleConfig.typography.panelBorder} ${styleConfig.typography.panelText} ${styleConfig.typography.fontFamily}`}
                     >
                         <DropdownMenuLabel
                             className={`px-2 py-1 text-xs font-semibold ${
